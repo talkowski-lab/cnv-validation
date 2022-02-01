@@ -11,11 +11,12 @@ task genomeStripIRS {
         String prefix
         String gs_path
         String	array_validation_docker
+        String chromosome
     }
 
     output {
-        File vcf = "${prefix}.irs.vcf.gz"
-        File report = "${prefix}.irs.report.dat.gz"
+        File vcf = "${prefix}.~{chromosome}.irs.vcf.gz"
+        File report = "${prefix}.~{chromosome}.irs.report.dat.gz"
     }
 
     command <<<
@@ -30,15 +31,15 @@ task genomeStripIRS {
         -A IntensityRankSum \
         -R ~{genome} \
         -vcf ~{input_file} \
-        -O ~{prefix}.irs.vcf \
+        -O ~{prefix}.~{chromosome}.irs.vcf \
         -arrayIntensityFile ~{array} \
         -sample ~{samples_list} \
         -irsSampleTag SAMPLES \
         -writeReport true \
-        -reportFile ~{prefix}.irs.report.dat
+        -reportFile ~{prefix}.~{chromosome}.irs.report.dat
 
-        gzip ~{prefix}.irs.vcf
-        gzip ~{prefix}.irs.report.dat
+        gzip ~{prefix}.~{chromosome}.irs.vcf
+        gzip ~{prefix}.~{chromosome}.irs.report.dat
 	>>>
 
     runtime {

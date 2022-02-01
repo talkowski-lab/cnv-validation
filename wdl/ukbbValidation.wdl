@@ -36,16 +36,6 @@ workflow ukbbArrayValidation {
                 array_validation_docker=array_validation_docker,
                 chromosome=contig
         }
-    }
-
-    call mergeLRR{
-        input:
-            files=select_all(calculateLRR.array_lrr),
-            prefix=prefix,
-            array_validation_docker=array_validation_docker
-    }
-
-    scatter (contig in contigs) {
 
         File gcnv_file = "~{gcnv_dir}/ukbb_199811_gCNV.~{contig}.bed.gz"
 
@@ -58,31 +48,39 @@ workflow ukbbArrayValidation {
                 array_validation_docker=array_validation_docker,
                 chromosome=contig
         }
+
+        call gsirs.genomeStripIRS as genomeStripIRS{
+            input:
+                input_file=gCNVbed2vcf.gcnv_vcf,
+                genome=genome,
+                genome_index=genome_index,
+                genome_dict=genome_dict,
+                array=calculateLRR.array_lrr,
+                samples_list=getVCF.samples,
+                prefix=prefix,
+                gs_path=gs_path,
+                array_validation_docker=array_validation_docker,
+                chromosome=contig
+        }
     }
 
     call mergeVCF{
         input:
-            files=select_all(gCNVbed2vcf.gcnv_vcf),
+            files=select_all(genomeStripIRS.vcf),
             prefix=prefix,
             array_validation_docker=array_validation_docker
     }
 
-    call gsirs.genomeStripIRS as genomeStripIRS{
+    call mergeLRR{
         input:
-            input_file=mergeVCF.merged_vcf,
-            genome=genome,
-            genome_index=genome_index,
-            genome_dict=genome_dict,
-            array=mergeLRR.merged_lrr,
-            samples_list=getVCF.samples,
+            files=select_all(genomeStripIRS.report),
             prefix=prefix,
-            gs_path=gs_path,
             array_validation_docker=array_validation_docker
     }
 
 	output {
-        File irs_vcf = genomeStripIRS.vcf
-        File irs_report = genomeStripIRS.report
+        File irs_vcf = mergeVCF.merged_vcf
+        File irs_report = mergeLRR.merged_lrr
     }
 }
 
@@ -170,7 +168,7 @@ task mergeLRR {
 	}
 
 	output {
-        File merged_lrr = "~{prefix}.merged.lrr.exp"
+        File merged_lrr = "~{prefix}.merged.report.dat"
 	}
 
 	command <<<
@@ -180,7 +178,7 @@ task mergeLRR {
         echo "Merging LRR files"
         echo "~{sep=" " files}" > LRRfiles.fof
         sed -i "s/ /\n/g" LRRfiles.fof
-        Rscript scripts/mergeFiles.R -f LRRfiles.fof -o ~{prefix}.merged.lrr.exp
+        Rscript scripts/mergeFiles.R -f LRRfiles.fof -o ~{prefix}.merged.report.dat
 	>>>
 
 	runtime {
@@ -243,12 +241,12 @@ task mergeVCF {
 	}
 
 	output {
-        File merged_vcf = "~{prefix}.merged.gCNV.vcf"
+        File merged_vcf = "~{prefix}.merged.irs.vcf"
 	}
 
 	command <<<
         echo "Concatenating VCF files"
-        bcftools concat ~{sep=" " files} | bcftools sort > ~{prefix}.merged.gCNV.vcf
+        bcftools concat ~{sep=" " files} | bcftools sort > ~{prefix}.merged.irs.vcf
 	>>>
 
 	runtime {

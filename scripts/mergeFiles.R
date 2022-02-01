@@ -19,6 +19,7 @@ out <- opt$out
 
 merged <- do.call(rbind, lapply(files$V1, fread))
 
-merged_sort <- merged[order(merged$CHROM, merged$START, merged$END),]
+#merged_sort <- merged[order(merged$CHROM, merged$START, merged$END),]
+merged_sort <- merged[order(merged$CHR, merged$START, merged$END),]
 
 write.table(merged_sort, out, sep="\t", quote=F, row.names=F)
