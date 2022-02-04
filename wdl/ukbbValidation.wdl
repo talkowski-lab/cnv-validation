@@ -95,7 +95,7 @@ task getVCF {
 	output {
         File ori_vcf = "~{prefix}.vcf.gz"
         File ori_vcf_idx = "~{prefix}.vcf.gz.tbi"
-        File samples = "samples.txt"
+        File samples = "samples.list"
 	}
 
 	command <<<
@@ -106,7 +106,7 @@ task getVCF {
         bcftools view ~{array_bcf} -O z -o ~{prefix}.vcf.gz
         tabix -p vcf ~{prefix}.vcf.gz
 
-        grep -wf <(bcftools query -l ~{prefix}.vcf.gz) ~{samples_list} > samples.txt
+        grep -wf <(bcftools query -l ~{prefix}.vcf.gz) ~{samples_list} > samples.list
 	>>>
 
 	runtime {
