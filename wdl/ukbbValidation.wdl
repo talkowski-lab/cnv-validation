@@ -100,7 +100,7 @@ task getVCF {
 
 	command <<<
         echo "Copying scripts"
-        gsutil cp -r gs://alba-gatk-sv/array-validation/scripts .
+        gsutil -m cp -r gs://alba-gatk-sv/array-validation/scripts .
 
         echo "Reformatting UKBB VCF file"
         bcftools view ~{array_bcf} -O z -o ~{prefix}.vcf.gz
@@ -137,7 +137,7 @@ task calculateLRR {
 
 	command <<<
         echo "Copying scripts"
-        gsutil cp -r gs://alba-gatk-sv/array-validation/scripts .
+        gsutil -m cp -r gs://alba-gatk-sv/array-validation/scripts .
 
         bcftools view ~{ori_vcf} ~{chromosome} -S ~{samples_list} --force-samples | \
             bcftools query -H -f "%ID\t%CHROM\t%POS[\t%LRR]\n" | \
@@ -169,11 +169,12 @@ task mergeLRR {
 
 	output {
         File merged_lrr = "~{prefix}.merged.report.dat"
+        File lrr_files = "LRRfiles.fof"
 	}
 
 	command <<<
         echo "Copying scripts"
-        gsutil cp -r gs://alba-gatk-sv/array-validation/scripts .
+        gsutil -m cp -r gs://alba-gatk-sv/array-validation/scripts .
 
         echo "Merging LRR files"
         echo "~{sep=" " files}" > LRRfiles.fof
@@ -209,7 +210,7 @@ task gCNVbed2vcf {
 
 	command <<<
         echo "Copying scripts"
-        gsutil cp -r gs://alba-gatk-sv/array-validation/scripts .
+        gsutil -m cp -r gs://alba-gatk-sv/array-validation/scripts .
 
         echo "Subsetting gCNV file"
         Rscript scripts/cnvSubset.R -s ~{samples_list} -i ~{gcnv_file} -o ~{prefix}_~{chromosome}.bed
@@ -246,7 +247,7 @@ task mergeVCF {
 
 	command <<<
         echo "Concatenating VCF files"
-        bcftools concat ~{sep=" " files} | bcftools sort > ~{prefix}.merged.irs.vcf
+        bcftools concat ~{sep=" " files} -Oz -o ~{prefix}.merged.irs.vcf.gz
 	>>>
 
 	runtime {
