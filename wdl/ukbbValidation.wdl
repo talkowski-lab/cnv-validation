@@ -246,7 +246,7 @@ task mergeVCF {
 
 	command <<<
         echo "Concatenating VCF files"
-        bcftools concat ~{sep=" " files} -Oz -o ~{prefix}.merged.vcf.gz
+        bcftools concat ~{sep=" " files} | bcftools sort -O z -o ~{prefix}.merged.vcf.gz
 	>>>
 
 	runtime {
