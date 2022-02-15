@@ -48,39 +48,38 @@ workflow ukbbArrayValidation {
                 array_validation_docker=array_validation_docker,
                 chromosome=contig
         }
-
-        call gsirs.genomeStripIRS as genomeStripIRS{
-            input:
-                input_file=gCNVbed2vcf.gcnv_vcf,
-                genome=genome,
-                genome_index=genome_index,
-                genome_dict=genome_dict,
-                array=calculateLRR.array_lrr,
-                samples_list=getVCF.samples,
-                prefix=prefix,
-                gs_path=gs_path,
-                array_validation_docker=array_validation_docker,
-                chromosome=contig
-        }
-    }
-
-    call mergeVCF{
-        input:
-            files=select_all(genomeStripIRS.vcf),
-            prefix=prefix,
-            array_validation_docker=array_validation_docker
     }
 
     call mergeLRR{
         input:
-            files=select_all(genomeStripIRS.report),
+            files=select_all(calculateLRR.array_lrr),
             prefix=prefix,
             array_validation_docker=array_validation_docker
     }
 
+    call mergeVCF{
+        input:
+            files=select_all(gCNVbed2vcf.gcnv_vcf),
+            prefix=prefix,
+            array_validation_docker=array_validation_docker
+    }
+
+    call gsirs.genomeStripIRS as genomeStripIRS{
+        input:
+            input_file=mergeVCF.merged_vcf,
+            genome=genome,
+            genome_index=genome_index,
+            genome_dict=genome_dict,
+            array=mergeLRR.merged_lrr,
+            samples_list=getVCF.samples,
+            prefix=prefix,
+            gs_path=gs_path,
+            array_validation_docker=array_validation_docker
+    }
+
 	output {
-        File irs_vcf = mergeVCF.merged_vcf
-        File irs_report = mergeLRR.merged_lrr
+        File irs_vcf = genomeStripIRS.vcf
+        File irs_report = genomeStripIRS.report
     }
 }
 
