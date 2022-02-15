@@ -241,12 +241,12 @@ task mergeVCF {
 	}
 
 	output {
-        File merged_vcf = "~{prefix}.merged.irs.vcf"
+        File merged_vcf = "~{prefix}.merged.vcf"
 	}
 
 	command <<<
         echo "Concatenating VCF files"
-        bcftools concat ~{sep=" " files} -Oz -o ~{prefix}.merged.irs.vcf.gz
+        bcftools concat ~{sep=" " files} -Oz -o ~{prefix}.merged.vcf.gz
 	>>>
 
 	runtime {
