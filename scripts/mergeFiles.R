@@ -14,12 +14,16 @@ option_list = list(
 opt_parser <- OptionParser(option_list=option_list)
 opt <- parse_args(opt_parser)
 
+print("Defining variable")
 files <- fread(opt$files, header=F)
 out <- opt$out
 
+print("Merging")
 merged <- do.call(rbind, lapply(files$V1, fread))
 
-#merged_sort <- merged[order(merged$CHROM, merged$START, merged$END),]
-merged_sort <- merged[order(merged$CHR, merged$START, merged$END),]
+print("Sorting")
+merged_sort <- merged[order(merged$CHROM, merged$START, merged$END),]
+#merged_sort <- merged[order(merged$CHR, merged$START, merged$END),]
 
+print("Writing")
 write.table(merged_sort, out, sep="\t", quote=F, row.names=F)
