@@ -241,7 +241,7 @@ task mergeVCF {
 	}
 
 	output {
-        File merged_vcf = "~{prefix}.merged.vcf"
+        File merged_vcf = "~{prefix}.merged.vcf.gz"
 	}
 
 	command <<<
