@@ -182,8 +182,8 @@ task mergeLRR {
 	>>>
 
 	runtime {
-        memory: "24 GiB"
-        disks: "local-disk 50 HDD"
+        memory: "42 GiB"
+        disks: "local-disk 80 HDD"
         cpu: 1
         preemptible: 3
         maxRetries: 1
