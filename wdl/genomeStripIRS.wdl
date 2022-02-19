@@ -25,7 +25,7 @@ task genomeStripIRS {
         export SV_DIR=/cromwell_root/svtoolkit
         export classpath="${SV_DIR}/lib/SVToolkit.jar:${SV_DIR}/lib/gatk/GenomeAnalysisTK.jar:${SV_DIR}/lib/gatk/Queue.jar"
 
-        java -Xmx8g -cp $classpath \
+        java -Xmx16g -cp $classpath \
         org.broadinstitute.sv.main.SVAnnotator \
         -A IntensityRankSum \
         -R ~{genome} \
@@ -43,7 +43,7 @@ task genomeStripIRS {
 
     runtime {
         memory: "24 GiB"
-        disks: "local-disk 20 HDD"
+        disks: "local-disk 50 HDD"
         cpu: 1
         preemptible: 3
         maxRetries: 1
