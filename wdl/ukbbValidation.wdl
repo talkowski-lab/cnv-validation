@@ -183,12 +183,12 @@ task mergeLRR {
 
 	runtime {
         memory: "24 GiB"
-        disks: "local-disk 30 HDD"
+        disks: "local-disk 50 HDD"
         cpu: 1
         preemptible: 3
         maxRetries: 1
         docker: array_validation_docker
-        bootDiskSizeGb: 20
+        bootDiskSizeGb: 30
     }
 }
 
