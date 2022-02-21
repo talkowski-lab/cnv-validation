@@ -19,9 +19,9 @@ workflow ukbbArrayValidation {
         String gs_path
     }
 
-    Array[String] array_fof = transpose(read_tsv(array_fof))[0]
+    Array[String] array_files = transpose(read_tsv(array_fof))[0]
 
-    scatter(array_bcf in array_fof){
+    scatter(array_bcf in array_files){
 
         String prefix = basename(array_fof, ".bcf")
 
@@ -83,12 +83,13 @@ workflow ukbbArrayValidation {
                 gs_path=gs_path,
                 array_validation_docker=array_validation_docker
         }
-
-        output {
-            File irs_vcf = genomeStripIRS.vcf
-            File irs_report = genomeStripIRS.report
-        }
     }
+
+    output {
+            Array[File] irs_vcf = genomeStripIRS.vcf
+            Array[File] irs_report = genomeStripIRS.report
+    }
+
 }
 
 task getVCF {
