@@ -5,8 +5,9 @@ import "genomeStripIRS.wdl" as gsirs
 workflow ukbbArrayValidation {
 
     input {
-        File array_bcf
-        String prefix
+#        File array_bcf
+#        String prefix
+        File array_fof
         String array_validation_docker
         File samples_list
         Array[String] contigs
@@ -18,68 +19,75 @@ workflow ukbbArrayValidation {
         String gs_path
     }
 
-    call getVCF{
-        input:
-            array_bcf=array_bcf,
-            samples_list=samples_list,
-            prefix=prefix,
-            array_validation_docker=array_validation_docker
-    }
+    Array[String] array_fof = transpose(read_tsv(array_fof))[0]
 
-    scatter (contig in contigs) {
-        call calculateLRR{
+    scatter(array_bcf in array_fof){
+
+        String prefix = basename(array_fof, ".bcf")
+
+        call getVCF{
             input:
-                ori_vcf=getVCF.ori_vcf,
-                ori_vcf_idx=getVCF.ori_vcf_idx,
-                samples_list=getVCF.samples,
+                array_bcf=array_bcf,
+                samples_list=samples_list,
                 prefix=prefix,
-                array_validation_docker=array_validation_docker,
-                chromosome=contig
+                array_validation_docker=array_validation_docker
         }
 
-        File gcnv_file = "~{gcnv_dir}/ukbb_199811_gCNV.~{contig}.bed.gz"
+        scatter (contig in contigs) {
+            call calculateLRR{
+                input:
+                    ori_vcf=getVCF.ori_vcf,
+                    ori_vcf_idx=getVCF.ori_vcf_idx,
+                    samples_list=getVCF.samples,
+                    prefix=prefix,
+                    array_validation_docker=array_validation_docker,
+                    chromosome=contig
+            }
 
-        call gCNVbed2vcf{
-            input:
-                samples_list=getVCF.samples,
-                gcnv_file=gcnv_file,
-                header=header,
-                prefix=prefix,
-                array_validation_docker=array_validation_docker,
-                chromosome=contig
+            File gcnv_file = "~{gcnv_dir}/ukbb_199811_gCNV.~{contig}.bed.gz"
+
+            call gCNVbed2vcf{
+                input:
+                    samples_list=getVCF.samples,
+                    gcnv_file=gcnv_file,
+                    header=header,
+                    prefix=prefix,
+                    array_validation_docker=array_validation_docker,
+                    chromosome=contig
+            }
         }
-    }
 
-    call mergeLRR{
-        input:
-            files=select_all(calculateLRR.array_lrr),
-            prefix=prefix,
-            array_validation_docker=array_validation_docker
-    }
+        call mergeLRR{
+            input:
+                files=select_all(calculateLRR.array_lrr),
+                prefix=prefix,
+                array_validation_docker=array_validation_docker
+        }
 
-    call mergeVCF{
-        input:
-            files=select_all(gCNVbed2vcf.gcnv_vcf),
-            prefix=prefix,
-            array_validation_docker=array_validation_docker
-    }
+        call mergeVCF{
+            input:
+                files=select_all(gCNVbed2vcf.gcnv_vcf),
+                prefix=prefix,
+                array_validation_docker=array_validation_docker
+        }
 
-    call gsirs.genomeStripIRS as genomeStripIRS{
-        input:
-            input_file=mergeVCF.merged_vcf,
-            genome=genome,
-            genome_index=genome_index,
-            genome_dict=genome_dict,
-            array=mergeLRR.merged_lrr,
-            samples_list=getVCF.samples,
-            prefix=prefix,
-            gs_path=gs_path,
-            array_validation_docker=array_validation_docker
-    }
+        call gsirs.genomeStripIRS as genomeStripIRS{
+            input:
+                input_file=mergeVCF.merged_vcf,
+                genome=genome,
+                genome_index=genome_index,
+                genome_dict=genome_dict,
+                array=mergeLRR.merged_lrr,
+                samples_list=getVCF.samples,
+                prefix=prefix,
+                gs_path=gs_path,
+                array_validation_docker=array_validation_docker
+        }
 
-	output {
-        File irs_vcf = genomeStripIRS.vcf
-        File irs_report = genomeStripIRS.report
+        output {
+            File irs_vcf = genomeStripIRS.vcf
+            File irs_report = genomeStripIRS.report
+        }
     }
 }
 
