@@ -23,7 +23,7 @@ workflow ukbbArrayValidation {
 
     scatter(array_bcf in array_files){
 
-        String prefix = basename(array_fof, ".bcf")
+        String prefix = basename(array_bcf, ".bcf")
 
         call getVCF{
             input:
