@@ -118,7 +118,7 @@ task getVCF {
 	>>>
 
 	runtime {
-        memory: "24 GiB"
+        memory: "32 GiB"
         disks: "local-disk 80 HDD"
         cpu: 1
         preemptible: 3
@@ -158,7 +158,7 @@ task calculateLRR {
 	>>>
 
 	runtime {
-        memory: "24 GiB"
+        memory: "32 GiB"
         disks: "local-disk 50 HDD"
         cpu: 1
         preemptible: 3
@@ -191,7 +191,7 @@ task mergeLRR {
 	>>>
 
 	runtime {
-        memory: "42 GiB"
+        memory: "64 GiB"
         disks: "local-disk 80 HDD"
         cpu: 1
         preemptible: 3
@@ -232,7 +232,7 @@ task gCNVbed2vcf {
 	>>>
 
 	runtime {
-        memory: "24 GiB"
+        memory: "32 GiB"
         disks: "local-disk 30 HDD"
         cpu: 1
         preemptible: 3
@@ -259,7 +259,7 @@ task mergeVCF {
 	>>>
 
 	runtime {
-        memory: "24 GiB"
+        memory: "32 GiB"
         disks: "local-disk 30 HDD"
         cpu: 1
         preemptible: 3
