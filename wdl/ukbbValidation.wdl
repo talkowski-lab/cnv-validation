@@ -44,7 +44,7 @@ workflow ukbbArrayValidation {
                     chromosome=contig
             }
 
-            File gcnv_file = "~{gcnv_dir}/ukbb_199811_gCNV.~{contig}.bed.gz"
+            File gcnv_file = "~{gcnv_dir}/ukbb*.~{contig}.bed.gz"
 
             call gCNVbed2vcf{
                 input:
