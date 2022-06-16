@@ -42,8 +42,8 @@ task genomeStripIRS {
 	>>>
 
     runtime {
-        memory: "32 GiB"
-        disks: "local-disk 50 HDD"
+        memory: "64 GiB"
+        disks: "local-disk 100 HDD"
         cpu: 1
         preemptible: 3
         maxRetries: 1
