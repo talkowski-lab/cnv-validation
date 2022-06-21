@@ -42,12 +42,12 @@ task genomeStripIRS {
 	>>>
 
     runtime {
-        memory: "64 GiB"
-        disks: "local-disk 100 HDD"
+        memory: "124 GiB"
+        disks: "local-disk 150 HDD"
         cpu: 1
         preemptible: 3
         maxRetries: 1
         docker: array_validation_docker
-        bootDiskSizeGb: 20
+        bootDiskSizeGb: 100
     }
 }
