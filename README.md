@@ -22,7 +22,7 @@
 
 ## <a name="usage">Usage</a>
 The main scripts to run this analysis are:
-* `ukbbValidation.wdl`: this workflow reformats SNP array and gCNV data from the UKBB and calls GenomeStrip IRS for <i>in-silico</i> CNV validation.   
+* `aouValidation.wdl`: this workflow reformats SNP array and gCNV data from the AoU and calls GenomeStrip IRS for <i>in-silico</i> CNV validation.   
 * `genomeStripIRS.wdl`: runs GenomeStrip IRS and can be executed on its own. 
 
 ### Execution
