@@ -5,8 +5,6 @@ import "genomeStripIRS.wdl" as gsirs
 workflow ukbbArrayValidation {
 
     input {
-#        File array_bcf
-#        String prefix
         File array_fof
         String array_validation_docker
         File samples_list
