@@ -21,19 +21,19 @@ def main():
     parser = argparse.ArgumentParser(description='Parse arguments')
     parser.add_argument('--input', dest='input', help='Input file')
     parser.add_argument('--output', dest='output', help='Output file')
-    parser.add_argument('--samples', dest='samples', help='Samples')
+    # parser.add_argument('--samples', dest='samples', help='Samples')
     args = parser.parse_args()
 
     input = args.input
     output = args.output
-    samples = args.samples
+    # samples = args.samples
 
-    """
-    Get samples
-    """
-    sampFile=open(samples, 'r')
-    sample_ids=sampFile.read().splitlines()
-    sample_ids_list = '\t'.join(sample_ids)
+    # """
+    # Get samples
+    # """
+    # sampFile=open(samples, 'r')
+    # sample_ids=sampFile.read().splitlines()
+    # sample_ids_list = '\t'.join(sample_ids)
 
     """
     Reformat columns
@@ -48,8 +48,9 @@ def main():
     """
     Select columns with samples in list
     """
-    main_cols = list(df.columns[0:4])
-    keep_cols = main_cols + list([c for c in df.columns[5:] if c in sample_ids_list])
+    # main_cols = list(df.columns[0:4])
+    # keep_cols = main_cols + list([c for c in df.columns[5:] if c in sample_ids_list])
+    keep_cols = list(df.columns[ 0:5 ])
     df_keep = df.loc[:, keep_cols]
 
     """
