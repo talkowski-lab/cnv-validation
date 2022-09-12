@@ -15,9 +15,8 @@
 * [cromshell](https://github.com/broadinstitute/cromshell) for interacting with a dedicated Cromwell server.
 
 ### Data:
-* Directory path with bed files containing UKBB gCNV output (per chromosome).
-  * VCF header template
-* List of UKBB SNP array files in VCF format: 
+* GATK-SV output VCF file
+* List of AoU SNP array files by sample in VCF format 
 * List of samples on which to run GenomeStrip IRS
 
 ## <a name="usage">Usage</a>
@@ -40,4 +39,4 @@ The main scripts to run this analysis are:
 Copyright (c) 2022 Talkowski Lab and The Broad Institute of M.I.T. and Harvard  
 Contact: [Alba Sanchis-Juan](mailto:asanchis-juan@mgh.harvard.edu)
 
-SV aggregation team: Ryan Collins, Jack Fu, Isaac Wong, Alba Sanchis-Juan and Harrison Brand on behalf of the Talkowski Laboratory
+Contributors: Alba Sanchis-Juan and Emma Pierce-Hoffman on behalf of the Talkowski Laboratory
