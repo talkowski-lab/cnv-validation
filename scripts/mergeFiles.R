@@ -19,13 +19,7 @@ files <- fread(opt$files, header=F)
 out <- opt$out
 
 print("Merging")
-merged <- do.call(rbind, lapply(files$V1, fread))
-
-print("Sorting")
-merged$CHROM <- factor(merged$CHROM, levels = c(paste0("chr", 1:22), "chrX"))
-
-#merged_sort <- merged[sort(merged$CHROM, merged$START, merged$END),]
-merged_sort <- merged[order(merged$CHROM, merged$START, merged$END),]
+merged <- do.call(merge, lapply(file, fread))
 
 print("Writing")
-write.table(merged_sort, out, sep="\t", quote=F, row.names=F)
+write.table(merged, out, sep="\t", quote=F, row.names=F)
