@@ -1,5 +1,7 @@
 version 1.0
 
+import "Structs.wdl"
+
 task genomeStripIRS {
     input {
         File input_file
@@ -8,9 +10,9 @@ task genomeStripIRS {
         File genome_dict
         File array
         File samples_list
-        String prefix
         String gs_path
         String	array_validation_docker
+        RuntimeAttr? runtime_attr_override
     }
 
     RuntimeAttr default_attr = object {
@@ -24,8 +26,8 @@ task genomeStripIRS {
     RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
 
     output {
-        File vcf = "${prefix}.irs.vcf.gz"
-        File report = "${prefix}.irs.report.dat.gz"
+        File vcf = "aou.irs.vcf.gz"
+        File report = "aou.irs.report.dat.gz"
     }
 
     command <<<
@@ -40,15 +42,15 @@ task genomeStripIRS {
         -A IntensityRankSum \
         -R ~{genome} \
         -vcf ~{input_file} \
-        -O ~{prefix}.irs.vcf \
+        -O aou.irs.vcf \
         -arrayIntensityFile ~{array} \
         -sample ~{samples_list} \
         -irsSampleTag SAMPLES \
         -writeReport true \
-        -reportFile ~{prefix}.irs.report.dat
+        -reportFile aou.irs.report.dat
 
-        gzip ~{prefix}.irs.vcf
-        gzip ~{prefix}.irs.report.dat
+        gzip aou.irs.vcf
+        gzip aou.irs.report.dat
 	>>>
 
     runtime {
