@@ -3,7 +3,7 @@ version 1.0
 import "genomeStripIRS.wdl" as gsirs
 import "Structs.wdl"
 
-workflow ukbbArrayValidation {
+workflow aouArrayValidation {
 
     input {
         File samples_list
@@ -13,6 +13,7 @@ workflow ukbbArrayValidation {
         File genome
         File genome_index
         File genome_dict
+        File gatk_sv_vcf
         String gs_path
         String array_validation_docker
         RuntimeAttr? runtime_attr_override
@@ -29,7 +30,7 @@ workflow ukbbArrayValidation {
             input:
                 input_vcf=sample_vcf,
                 input_idx=sample_idx,
-                prefix=sample,
+                sample=sample,
                 array_validation_docker=array_validation_docker,
                 runtime_attr_override = runtime_attr_override
         }
@@ -37,7 +38,6 @@ workflow ukbbArrayValidation {
     call mergeLRR{
         input:
             files=select_all(calculateLRR.array_lrr),
-            prefix=prefix,
             array_validation_docker=array_validation_docker,
             runtime_attr_override = runtime_attr_override
     }
@@ -47,8 +47,8 @@ workflow ukbbArrayValidation {
         call subsetGATKSV{
             input:
                 gatk_sv_vcf=gatk_sv_vcf,
-                prefix=sample,
-                chromosome=contig
+                gatk_sv_vcf_idx="~{gatk_sv_vcf}.tbi",
+                chromosome=contig,
                 array_validation_docker=array_validation_docker,
                 runtime_attr_override = runtime_attr_override
         }
@@ -61,7 +61,6 @@ workflow ukbbArrayValidation {
                 genome_dict=genome_dict,
                 array=mergeLRR.merged_lrr,
                 samples_list=samples_list,
-                prefix=prefix,
                 gs_path=gs_path,
                 array_validation_docker=array_validation_docker,
                 runtime_attr_override = runtime_attr_override
@@ -80,8 +79,10 @@ task calculateLRR {
         File input_vcf
         File input_idx
         File samples_list
-        String prefix
+        String sample
         String array_validation_docker
+        RuntimeAttr? runtime_attr_override
+
 	}
 
     RuntimeAttr default_attr = object {
@@ -95,22 +96,22 @@ task calculateLRR {
     RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
 
 	output {
-        File lrr = "~{prefix}.lrr.gz"
-        File array_lrr = "~{prefix}.lrr.exp"
+        File lrr = "~{sample}.lrr.gz"
+        File array_lrr = "~{sample}.lrr.exp"
 	}
 
 	command <<<
         echo "Copying scripts"
         gsutil -m cp -r gs://alba-gatk-sv/array-validation/scripts .
 
-        bcftools reheader --samples ~{samples_list} -o ~{prefix}.reheader.vcf.gz ~{input_vcf}
+        bcftools reheader --samples ~{samples_list} -o ~{sample}.reheader.vcf.gz ~{input_vcf}
 
-        bcftools query -H -f "%ID\t%CHROM\t%POS[\t%LRR]\n" ~{prefix}.reheader.vcf.gz | \
-            gzip > ~{prefix}.lrr.gz
+        bcftools query -H -f "%ID\t%CHROM\t%POS[\t%LRR]\n" ~{sample}.reheader.vcf.gz | \
+            gzip > ~{sample}.lrr.gz
 
         echo "Calculating LRRs"
-        python3 scripts/calculateLRR.py --input ~{prefix}.lrr.gz \
-            --output ~{prefix}.lrr.exp
+        python3 scripts/calculateLRR.py --input ~{sample}.lrr.gz \
+            --output ~{sample}.lrr.exp
 	>>>
 
 	runtime {
@@ -131,6 +132,7 @@ task subsetGATKSV {
         File sample_list
         String chromosome
         String array_validation_docker
+        RuntimeAttr? runtime_attr_override
 	}
 
     RuntimeAttr default_attr = object {
@@ -152,12 +154,12 @@ task subsetGATKSV {
         gsutil -m cp -r gs://alba-gatk-sv/array-validation/scripts .
 
         echo "Subset only samples in sample list"
-        bcftools view ~{gatk_sv_vcf} ~{chromosome} -S ~{sample_list} -O z -o gatk-sv.~{chomosome}.vcf.gz
+        bcftools view ~{gatk_sv_vcf} ~{chromosome} -S ~{sample_list} -O z -o gatk-sv.~{chromosome}.vcf.gz
 
         echo "Subset only DEL/DUP"
-        bcftools view gatk-sv.~{chomosome}.vcf.gz | \
-            grep -E "^#|DEL|DUP" | bcftools view -O z -o gatk-sv.cnv.~{chomosome}.vcf.gz
-        tabix -p vcf gatk-sv.cnv.~{chomosome}.vcf.gz
+        bcftools view gatk-sv.~{chromosome}.vcf.gz | \
+            grep -E "^#|DEL|DUP" | bcftools view -O z -o gatk-sv.cnv.~{chromosome}.vcf.gz
+        tabix -p vcf gatk-sv.cnv.~{chromosome}.vcf.gz
 	>>>
 
 	runtime {
@@ -174,8 +176,8 @@ task subsetGATKSV {
 task mergeLRR {
 	input {
         Array[File] files
-        String prefix
         String array_validation_docker
+        RuntimeAttr? runtime_attr_override
 	}
 
     RuntimeAttr default_attr = object {
@@ -189,7 +191,7 @@ task mergeLRR {
     RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
 
 	output {
-        File merged_lrr = "~{prefix}.merged.report.dat"
+        File merged_lrr = "aou.merged.report.dat"
         File lrr_files = "LRRfiles.fof"
 	}
 
@@ -200,7 +202,7 @@ task mergeLRR {
         echo "Merging LRR files"
         echo "~{sep=" " files}" > LRRfiles.fof
         sed -i "s/ /\n/g" LRRfiles.fof
-        Rscript scripts/mergeFiles.R -f LRRfiles.fof -o ~{prefix}.merged.report.dat
+        Rscript scripts/mergeFiles.R -f LRRfiles.fof -o aou.merged.report.dat
 	>>>
 
 	runtime {
