@@ -45,7 +45,7 @@ task genomeStripIRS {
         -O aou.irs.vcf \
         -arrayIntensityFile ~{array} \
         -sample ~{samples_list} \
-        -irsSampleTag SAMPLES \
+        -irsUseGenotypes true \
         -writeReport true \
         -reportFile aou.irs.report.dat
 
