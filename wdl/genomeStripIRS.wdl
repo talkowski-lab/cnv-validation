@@ -13,6 +13,16 @@ task genomeStripIRS {
         String	array_validation_docker
     }
 
+    RuntimeAttr default_attr = object {
+        cpu: 1,
+        mem_gb: 150,
+        disk_gb: 180,
+        boot_disk_gb: 100,
+        preemptible: 3,
+        max_retries: 1
+    }
+    RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
+
     output {
         File vcf = "${prefix}.irs.vcf.gz"
         File report = "${prefix}.irs.report.dat.gz"
@@ -42,12 +52,12 @@ task genomeStripIRS {
 	>>>
 
     runtime {
-        memory: "150 GiB"
-        disks: "local-disk 180 HDD"
-        cpu: 1
-        preemptible: 3
-        maxRetries: 1
+        cpu: select_first([runtime_attr.cpu, default_attr.cpu])
+        memory: select_first([runtime_attr.mem_gb, default_attr.mem_gb]) + " GiB"
+        disks: "local-disk " + select_first([runtime_attr.disk_gb, default_attr.disk_gb]) + " HDD"
+        bootDiskSizeGb: select_first([runtime_attr.boot_disk_gb, default_attr.boot_disk_gb])
+        preemptible: select_first([runtime_attr.preemptible, default_attr.preemptible])
+        maxRetries: select_first([runtime_attr.max_retries, default_attr.max_retries])
         docker: array_validation_docker
-        bootDiskSizeGb: 150
     }
 }

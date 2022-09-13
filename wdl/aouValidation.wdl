@@ -14,6 +14,7 @@ workflow ukbbArrayValidation {
         File genome_dict
         String gs_path
         String array_validation_docker
+        RuntimeAttr? runtime_attr_override
     }
 
     Array[String] samples = transpose(read_tsv(samples_list))[0]
@@ -28,14 +29,16 @@ workflow ukbbArrayValidation {
                 input_vcf=sample_vcf,
                 input_idx=sample_idx,
                 prefix=sample,
-                array_validation_docker=array_validation_docker
+                array_validation_docker=array_validation_docker,
+                runtime_attr_override = runtime_attr_override
         }
 
     call mergeLRR{
         input:
             files=select_all(calculateLRR.array_lrr),
             prefix=prefix,
-            array_validation_docker=array_validation_docker
+            array_validation_docker=array_validation_docker,
+            runtime_attr_override = runtime_attr_override
     }
 
     scatter(contig in contigs){
@@ -45,7 +48,8 @@ workflow ukbbArrayValidation {
                 gatk_sv_vcf=gatk_sv_vcf,
                 prefix=sample,
                 chromosome=contig
-                array_validation_docker=array_validation_docker
+                array_validation_docker=array_validation_docker,
+                runtime_attr_override = runtime_attr_override
         }
 
         call gsirs.genomeStripIRS as genomeStripIRS{
@@ -58,7 +62,8 @@ workflow ukbbArrayValidation {
                 samples_list=samples_list,
                 prefix=prefix,
                 gs_path=gs_path,
-                array_validation_docker=array_validation_docker
+                array_validation_docker=array_validation_docker,
+                runtime_attr_override = runtime_attr_override
             }
         }
 
@@ -77,6 +82,16 @@ task calculateLRR {
         String prefix
         String array_validation_docker
 	}
+
+    RuntimeAttr default_attr = object {
+        cpu: 1,
+        mem_gb: 16,
+        disk_gb: 30,
+        boot_disk_gb: 12,
+        preemptible: 3,
+        max_retries: 1
+    }
+    RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
 
 	output {
         File lrr = "~{prefix}.lrr.gz"
@@ -98,13 +113,13 @@ task calculateLRR {
 	>>>
 
 	runtime {
-        memory: "16 GiB"
-        disks: "local-disk 30 HDD"
-        cpu: 1
-        preemptible: 3
-        maxRetries: 1
+        cpu: select_first([runtime_attr.cpu, default_attr.cpu])
+        memory: select_first([runtime_attr.mem_gb, default_attr.mem_gb]) + " GiB"
+        disks: "local-disk " + select_first([runtime_attr.disk_gb, default_attr.disk_gb]) + " HDD"
+        bootDiskSizeGb: select_first([runtime_attr.boot_disk_gb, default_attr.boot_disk_gb])
+        preemptible: select_first([runtime_attr.preemptible, default_attr.preemptible])
+        maxRetries: select_first([runtime_attr.max_retries, default_attr.max_retries])
         docker: array_validation_docker
-        bootDiskSizeGb: 12
     }
 }
 
@@ -116,6 +131,16 @@ task subsetGATKSV {
         String chromosome
         String array_validation_docker
 	}
+
+    RuntimeAttr default_attr = object {
+        cpu: 1,
+        mem_gb: 32,
+        disk_gb: 30,
+        boot_disk_gb: 20,
+        preemptible: 3,
+        max_retries: 1
+    }
+    RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
 
 	output {
         File merged_vcf = "merged_gatk-sv.vcf.gz"
@@ -135,13 +160,13 @@ task subsetGATKSV {
 	>>>
 
 	runtime {
-        memory: "32 GiB"
-        disks: "local-disk 30 HDD"
-        cpu: 1
-        preemptible: 3
-        maxRetries: 1
+        cpu: select_first([runtime_attr.cpu, default_attr.cpu])
+        memory: select_first([runtime_attr.mem_gb, default_attr.mem_gb]) + " GiB"
+        disks: "local-disk " + select_first([runtime_attr.disk_gb, default_attr.disk_gb]) + " HDD"
+        bootDiskSizeGb: select_first([runtime_attr.boot_disk_gb, default_attr.boot_disk_gb])
+        preemptible: select_first([runtime_attr.preemptible, default_attr.preemptible])
+        maxRetries: select_first([runtime_attr.max_retries, default_attr.max_retries])
         docker: array_validation_docker
-        bootDiskSizeGb: 20
     }
 }
 
@@ -151,6 +176,16 @@ task mergeLRR {
         String prefix
         String array_validation_docker
 	}
+
+    RuntimeAttr default_attr = object {
+        cpu: 1,
+        mem_gb: 64,
+        disk_gb: 80,
+        boot_disk_gb: 30,
+        preemptible: 3,
+        max_retries: 1
+    }
+    RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
 
 	output {
         File merged_lrr = "~{prefix}.merged.report.dat"
@@ -168,12 +203,12 @@ task mergeLRR {
 	>>>
 
 	runtime {
-        memory: "64 GiB"
-        disks: "local-disk 80 HDD"
-        cpu: 1
-        preemptible: 3
-        maxRetries: 1
+        cpu: select_first([runtime_attr.cpu, default_attr.cpu])
+        memory: select_first([runtime_attr.mem_gb, default_attr.mem_gb]) + " GiB"
+        disks: "local-disk " + select_first([runtime_attr.disk_gb, default_attr.disk_gb]) + " HDD"
+        bootDiskSizeGb: select_first([runtime_attr.boot_disk_gb, default_attr.boot_disk_gb])
+        preemptible: select_first([runtime_attr.preemptible, default_attr.preemptible])
+        maxRetries: select_first([runtime_attr.max_retries, default_attr.max_retries])
         docker: array_validation_docker
-        bootDiskSizeGb: 30
     }
 }
