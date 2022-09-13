@@ -1,6 +1,7 @@
 version 1.0
 
 import "genomeStripIRS.wdl" as gsirs
+import "Structs.wdl"
 
 workflow ukbbArrayValidation {
 
@@ -32,7 +33,7 @@ workflow ukbbArrayValidation {
                 array_validation_docker=array_validation_docker,
                 runtime_attr_override = runtime_attr_override
         }
-
+    }
     call mergeLRR{
         input:
             files=select_all(calculateLRR.array_lrr),
