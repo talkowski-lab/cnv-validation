@@ -179,6 +179,7 @@ task subsetGATKSV {
 task mergeLRR {
 	input {
         Array[File] files
+        String scripts
         String array_validation_docker
         RuntimeAttr? runtime_attr_override
 	}
