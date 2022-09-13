@@ -22,7 +22,6 @@ workflow aouArrayValidation {
     Array[String] samples = transpose(read_tsv(samples_list))[0]
 
     scatter(sample in samples){
-        #vcf_path = "gs://prod-drc-broad/Array_vcfs/hg38/"
         File sample_vcf = "~{array_path}/~{sample}.*.sorted.vcf.gz"
         File sample_idx = "~{sample_vcf}.tbi"
 
@@ -101,16 +100,14 @@ task calculateLRR {
 	}
 
 	command <<<
-        echo "Copying scripts"
-        gsutil -m cp -r gs://alba-gatk-sv/array-validation/scripts .
-
+        echo "Reheader VCF"
         bcftools reheader --samples ~{samples_list} -o ~{sample}.reheader.vcf.gz ~{input_vcf}
 
         bcftools query -H -f "%ID\t%CHROM\t%POS[\t%LRR]\n" ~{sample}.reheader.vcf.gz | \
             gzip > ~{sample}.lrr.gz
 
         echo "Calculating LRRs"
-        python3 scripts/calculateLRR.py --input ~{sample}.lrr.gz \
+        python3 calculateLRR.py --input ~{sample}.lrr.gz \
             --output ~{sample}.lrr.exp
 	>>>
 
@@ -150,9 +147,6 @@ task subsetGATKSV {
 	}
 
 	command <<<
-        echo "Copying scripts"
-        gsutil -m cp -r gs://alba-gatk-sv/array-validation/scripts .
-
         echo "Subset only samples in sample list"
         bcftools view ~{gatk_sv_vcf} ~{chromosome} -S ~{sample_list} -O z -o gatk-sv.~{chromosome}.vcf.gz
 
@@ -196,13 +190,10 @@ task mergeLRR {
 	}
 
 	command <<<
-        echo "Copying scripts"
-        gsutil -m cp -r gs://alba-gatk-sv/array-validation/scripts .
-
         echo "Merging LRR files"
         echo "~{sep=" " files}" > LRRfiles.fof
         sed -i "s/ /\n/g" LRRfiles.fof
-        Rscript scripts/mergeFiles.R -f LRRfiles.fof -o aou.merged.report.dat
+        Rscript mergeFiles.R -f LRRfiles.fof -o aou.merged.report.dat
 	>>>
 
 	runtime {
