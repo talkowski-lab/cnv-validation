@@ -14,6 +14,7 @@ workflow aouArrayValidation {
         File genome_index
         File genome_dict
         File gatk_sv_vcf
+        File scripts
         String gs_path
         String array_validation_docker
         RuntimeAttr? runtime_attr_override
@@ -31,6 +32,7 @@ workflow aouArrayValidation {
                 input_idx=sample_idx,
                 sample=sample,
                 array_validation_docker=array_validation_docker,
+                scripts=scripts,
                 runtime_attr_override = runtime_attr_override
         }
     }
@@ -38,6 +40,7 @@ workflow aouArrayValidation {
         input:
             files=select_all(calculateLRR.array_lrr),
             array_validation_docker=array_validation_docker,
+            scripts=scripts,
             runtime_attr_override = runtime_attr_override
     }
 
@@ -49,6 +52,7 @@ workflow aouArrayValidation {
                 gatk_sv_vcf_idx="~{gatk_sv_vcf}.tbi",
                 chromosome=contig,
                 array_validation_docker=array_validation_docker,
+                scripts=scripts,
                 runtime_attr_override = runtime_attr_override
         }
 
@@ -79,6 +83,7 @@ task calculateLRR {
         File input_idx
         File samples_list
         String sample
+        String scripts
         String array_validation_docker
         RuntimeAttr? runtime_attr_override
 
@@ -100,6 +105,9 @@ task calculateLRR {
 	}
 
 	command <<<
+        echo "Copying scripts"
+        gsutil -m cp -r ~{scripts} .
+
         echo "Reheader VCF"
         bcftools reheader --samples ~{samples_list} -o ~{sample}.reheader.vcf.gz ~{input_vcf}
 
@@ -107,7 +115,7 @@ task calculateLRR {
             gzip > ~{sample}.lrr.gz
 
         echo "Calculating LRRs"
-        python3 calculateLRR.py --input ~{sample}.lrr.gz \
+        python3 scripts/calculateLRR.py --input ~{sample}.lrr.gz \
             --output ~{sample}.lrr.exp
 	>>>
 
@@ -128,6 +136,7 @@ task subsetGATKSV {
         File gatk_sv_vcf_idx
         File sample_list
         String chromosome
+        String scripts
         String array_validation_docker
         RuntimeAttr? runtime_attr_override
 	}
@@ -190,10 +199,13 @@ task mergeLRR {
 	}
 
 	command <<<
+        echo "Copying scripts"
+        gsutil -m cp -r ~{scripts} .
+
         echo "Merging LRR files"
         echo "~{sep=" " files}" > LRRfiles.fof
         sed -i "s/ /\n/g" LRRfiles.fof
-        Rscript mergeFiles.R -f LRRfiles.fof -o aou.merged.report.dat
+        Rscript scripts/mergeFiles.R -f LRRfiles.fof -o aou.merged.report.dat
 	>>>
 
 	runtime {
