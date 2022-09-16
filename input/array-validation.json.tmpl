@@ -1,12 +1,14 @@
 {
-    "ukbbArrayValidation.array_fof": "gs://alba-gatk-sv/array-validation/UKBB/data/array_bcf.fof",
-    "ukbbArrayValidation.array_validation_docker": "us.gcr.io/talkowski-sv-gnomad/asj:array-validation",
-    "ukbbArrayValidation.samples_list": "gs://alba-gatk-sv/array-validation/UKBB/data/by_chr/ukbb_199811_gCNV.samples.list",
-    "ukbbArrayValidation.contigs": ["chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10", "chr11", "chr12", "chr13", "chr14", "chr15", "chr16", "chr17", "chr18", "chr19", "chr20", "chr21", "chr22"],
-    "ukbbArrayValidation.gcnv_dir": "gs://alba-gatk-sv/array-validation/UKBB/data/by_chr",
-    "ukbbArrayValidation.header": "gs://alba-gatk-sv/array-validation/UKBB/data/ukbb_header.txt",
-    "ukbbArrayValidation.genome": "gs://alba-gatk-sv/resources/GRCh38/GRCh38_full_analysis_set_plus_decoy_hla.fa",
-    "ukbbArrayValidation.genome_index": "gs://alba-gatk-sv/resources/GRCh38/GRCh38_full_analysis_set_plus_decoy_hla.fa.fai",
-    "ukbbArrayValidation.genome_dict": "gs://alba-gatk-sv/resources/GRCh38/GRCh38_full_analysis_set_plus_decoy_hla.dict",
-    "ukbbArrayValidation.gs_path": "gs://alba-gatk-sv/software/svtoolkit"
+    "aouArrayValidation.samples": ["sample1", "sample2"],
+    "aouArrayValidation.prefix" : "AoUprefix",
+    "aouArrayValidation.array_vcfs": ["gs://bucket/sample1.vcf.gz", "gs://bucket/sample2.vcf.gz"],
+    "aouArrayValidation.array_validation_docker": "us.gcr.io/talkowski-sv-gnomad/asj:array-validation",
+    "aouArrayValidation.ids_corresp": "gs://bucket/sample_map.tsv",
+    "aouArrayValidation.primary_contigs_fai": "gs://bucket/contigs.fai",
+    "aouArrayValidation.gatk_sv_vcf": "gs://bucket/sv.vcf.gz",
+    "aouArrayValidation.genome": "gs://alba-gatk-sv/resources/GRCh38/GRCh38_full_analysis_set_plus_decoy_hla.fa",
+    "aouArrayValidation.genome_index": "gs://alba-gatk-sv/resources/GRCh38/GRCh38_full_analysis_set_plus_decoy_hla.fa.fai",
+    "aouArrayValidation.genome_dict": "gs://alba-gatk-sv/resources/GRCh38/GRCh38_full_analysis_set_plus_decoy_hla.dict",
+    "aouArrayValidation.gs_path": "gs://alba-gatk-sv/software/svtoolkit",
+    "aouArrayValidation.scripts": "gs://alba-gatk-sv/array-validation/scripts"
 }

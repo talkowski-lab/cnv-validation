@@ -6,73 +6,80 @@ import "Structs.wdl"
 workflow aouArrayValidation {
 
     input {
-        File samples_list
-        String array_path
+        Array[String] samples
+        Array[File] array_vcfs
+        File gatk_sv_vcf
         File ids_corresp
-        Array[String] contigs
+        String prefix
+
+        File primary_contigs_fai
         File genome
         File genome_index
         File genome_dict
-        File gatk_sv_vcf
+
         File scripts
         String gs_path
         String array_validation_docker
-        RuntimeAttr? runtime_attr_override
+
+        RuntimeAttr? runtime_attr_calculate_lrr
+        RuntimeAttr? runtime_attr_merge_lrr
+        RuntimeAttr? runtime_attr_subset_gatk_sv
+        RuntimeAttr? runtime_attr_genome_strip_irs
     }
 
-    Array[String] samples = transpose(read_tsv(samples_list))[0]
-
-    scatter(sample in samples){
-        File sample_vcf = "~{array_path}/~{sample}.*.sorted.vcf.gz"
-        File sample_idx = "~{sample_vcf}.tbi"
-
-        call calculateLRR{
+    scatter (i in range(length(samples))) {
+        call calculateLRR {
             input:
-                input_vcf=sample_vcf,
-                input_idx=sample_idx,
-                sample=sample,
+                input_vcf=array_vcfs[i],
+                input_idx=array_vcfs[i] + ".tbi",
+                sample=samples[i],
+                ids_corresp=ids_corresp,
                 array_validation_docker=array_validation_docker,
                 scripts=scripts,
-                runtime_attr_override = runtime_attr_override
+                runtime_attr_override = runtime_attr_calculate_lrr
         }
     }
-    call mergeLRR{
+    call mergeLRR {
         input:
             files=select_all(calculateLRR.array_lrr),
             array_validation_docker=array_validation_docker,
+            prefix=prefix,
             scripts=scripts,
-            runtime_attr_override = runtime_attr_override
+            runtime_attr_override = runtime_attr_merge_lrr
     }
 
-    scatter(contig in contigs){
-
-        call subsetGATKSV{
+    Array[String] contigs = transpose(read_tsv(primary_contigs_fai))[0]
+    scatter (contig in contigs) {
+        call subsetGATKSV {
             input:
                 gatk_sv_vcf=gatk_sv_vcf,
                 gatk_sv_vcf_idx="~{gatk_sv_vcf}.tbi",
+                sample_list=write_lines(samples),
+                prefix=prefix,
                 chromosome=contig,
                 array_validation_docker=array_validation_docker,
                 scripts=scripts,
-                runtime_attr_override = runtime_attr_override
+                runtime_attr_override = runtime_attr_subset_gatk_sv
         }
 
         call gsirs.genomeStripIRS as genomeStripIRS{
             input:
-                input_file=subsetGATKSV.merged_vcf,
+                input_file=subsetGATKSV.subset_vcf,
+                prefix=prefix,
                 genome=genome,
                 genome_index=genome_index,
                 genome_dict=genome_dict,
                 array=mergeLRR.merged_lrr,
-                samples_list=samples_list,
+                samples_list=write_lines(samples),
                 gs_path=gs_path,
                 array_validation_docker=array_validation_docker,
-                runtime_attr_override = runtime_attr_override
+                runtime_attr_override = runtime_attr_genome_strip_irs
             }
         }
 
     output {
-            Array[File] irs_vcf = genomeStripIRS.vcf
-            Array[File] irs_report = genomeStripIRS.report
+        Array[File] irs_vcf = genomeStripIRS.vcf
+        Array[File] irs_report = genomeStripIRS.report
     }
 
 }
@@ -81,7 +88,7 @@ task calculateLRR {
 	input {
         File input_vcf
         File input_idx
-        File samples_list
+        File ids_corresp
         String sample
         String scripts
         String array_validation_docker
@@ -109,7 +116,7 @@ task calculateLRR {
         gsutil -m cp -r ~{scripts} .
 
         echo "Reheader VCF"
-        bcftools reheader --samples ~{samples_list} -o ~{sample}.reheader.vcf.gz ~{input_vcf}
+        bcftools reheader --samples ~{ids_corresp} -o ~{sample}.reheader.vcf.gz ~{input_vcf}
 
         bcftools query -H -f "%ID\t%CHROM\t%POS[\t%LRR]\n" ~{sample}.reheader.vcf.gz | \
             gzip > ~{sample}.lrr.gz
@@ -135,6 +142,7 @@ task subsetGATKSV {
         File gatk_sv_vcf
         File gatk_sv_vcf_idx
         File sample_list
+        String prefix
         String chromosome
         String scripts
         String array_validation_docker
@@ -152,17 +160,18 @@ task subsetGATKSV {
     RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
 
 	output {
-        File merged_vcf = "merged_gatk-sv.vcf.gz"
+        File subset_vcf = "~{prefix}.cnv.~{chromosome}.vcf.gz"
+        File subset_vcf_index = "~{prefix}.cnv.~{chromosome}.vcf.gz.tbi"
 	}
 
 	command <<<
         echo "Subset only samples in sample list"
-        bcftools view ~{gatk_sv_vcf} ~{chromosome} -S ~{sample_list} -O z -o gatk-sv.~{chromosome}.vcf.gz
+        bcftools view ~{gatk_sv_vcf} ~{chromosome} -S ~{sample_list} -O z -o ~{prefix}.~{chromosome}.vcf.gz
 
         echo "Subset only DEL/DUP"
-        bcftools view gatk-sv.~{chromosome}.vcf.gz | \
-            grep -E "^#|DEL|DUP" | bcftools view -O z -o gatk-sv.cnv.~{chromosome}.vcf.gz
-        tabix -p vcf gatk-sv.cnv.~{chromosome}.vcf.gz
+        bcftools view ~{prefix}.~{chromosome}.vcf.gz | \
+            grep -E "^#|DEL|DUP" | bcftools view -O z -o ~{prefix}.cnv.~{chromosome}.vcf.gz
+        tabix -p vcf ~{prefix}.cnv.~{chromosome}.vcf.gz
 	>>>
 
 	runtime {
@@ -179,6 +188,7 @@ task subsetGATKSV {
 task mergeLRR {
 	input {
         Array[File] files
+        String prefix
         String scripts
         String array_validation_docker
         RuntimeAttr? runtime_attr_override
@@ -195,8 +205,8 @@ task mergeLRR {
     RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
 
 	output {
-        File merged_lrr = "aou.merged.report.dat"
-        File lrr_files = "LRRfiles.fof"
+        File merged_lrr = "~{prefix}.merged.report.dat"
+        File lrr_files = "~{prefix}.LRRfiles.fof"
 	}
 
 	command <<<
@@ -204,9 +214,9 @@ task mergeLRR {
         gsutil -m cp -r ~{scripts} .
 
         echo "Merging LRR files"
-        echo "~{sep=" " files}" > LRRfiles.fof
-        sed -i "s/ /\n/g" LRRfiles.fof
-        Rscript scripts/mergeFiles.R -f LRRfiles.fof -o aou.merged.report.dat
+        echo "~{sep=" " files}" > ~{prefix}.LRRfiles.fof
+        sed -i "s/ /\n/g" ~{prefix}.LRRfiles.fof
+        Rscript scripts/mergeFiles.R -f ~{prefix}.LRRfiles.fof -o ~{prefix}.merged.report.dat
 	>>>
 
 	runtime {
