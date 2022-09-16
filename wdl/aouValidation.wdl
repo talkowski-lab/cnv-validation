@@ -11,6 +11,7 @@ workflow aouArrayValidation {
         File gatk_sv_vcf
         File ids_corresp
         String prefix
+        String? min_cnv_size  # lower bound on SVLEN to evaluate against arrays. Default: 50000 (50kb)
 
         File primary_contigs_fai
         File genome
@@ -56,6 +57,7 @@ workflow aouArrayValidation {
                 gatk_sv_vcf_idx="~{gatk_sv_vcf}.tbi",
                 sample_list=write_lines(samples),
                 prefix=prefix,
+                min_cnv_size=select_first([min_cnv_size, "50000"])
                 chromosome=contig,
                 array_validation_docker=array_validation_docker,
                 scripts=scripts,
@@ -142,6 +144,7 @@ task subsetGATKSV {
         File gatk_sv_vcf
         File gatk_sv_vcf_idx
         File sample_list
+        String min_cnv_size
         String prefix
         String chromosome
         String scripts
@@ -165,12 +168,15 @@ task subsetGATKSV {
 	}
 
 	command <<<
-        echo "Subset only samples in sample list"
-        bcftools view ~{gatk_sv_vcf} ~{chromosome} -S ~{sample_list} -O z -o ~{prefix}.~{chromosome}.vcf.gz
+        echo "Subset to samples in sample list, contig of interest, DEL/DUP SVTYPEs, and SVLEN >= min_cnv_size "
+        bcftools view ~{gatk_sv_vcf} \
+            -r ~{chromosome} \
+            -S ~{sample_list} \
+            --with-header \
+            -i '(INFO/SVTYPE=="DEL" || INFO/SVTYPE=="DUP") && INFO/SVLEN>=~{min_cnv_size}' \
+            -O z \
+            -o ~{prefix}.cnv.~{chromosome}.vcf.gz
 
-        echo "Subset only DEL/DUP"
-        bcftools view ~{prefix}.~{chromosome}.vcf.gz | \
-            grep -E "^#|DEL|DUP" | bcftools view -O z -o ~{prefix}.cnv.~{chromosome}.vcf.gz
         tabix -p vcf ~{prefix}.cnv.~{chromosome}.vcf.gz
 	>>>
 
