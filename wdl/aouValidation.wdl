@@ -57,7 +57,7 @@ workflow aouArrayValidation {
                 gatk_sv_vcf_idx="~{gatk_sv_vcf}.tbi",
                 sample_list=write_lines(samples),
                 prefix=prefix,
-                min_cnv_size=select_first([min_cnv_size, "50000"])
+                min_cnv_size=select_first([min_cnv_size, "50000"]),
                 chromosome=contig,
                 array_validation_docker=array_validation_docker,
                 scripts=scripts,
