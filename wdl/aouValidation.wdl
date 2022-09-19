@@ -121,7 +121,7 @@ task calculateLRR {
         gsutil -m cp -r ~{scripts} .
 
         echo "Reheader VCF and limit to primary contigs"
-        bcftools reheader --no-version --samples ~{ids_corresp} -r ~{sep="," contigs} -O z -o ~{sample}.reheader.vcf.gz ~{input_vcf}
+        bcftools reheader --samples ~{ids_corresp} -r ~{sep="," contigs} -O z -o ~{sample}.reheader.vcf.gz ~{input_vcf}
 
         bcftools query -H -f "%ID\t%CHROM\t%POS[\t%LRR]\n" ~{sample}.reheader.vcf.gz | \
             gzip > ~{sample}.lrr.gz
@@ -173,7 +173,6 @@ task subsetGATKSV {
 	command <<<
         echo "Subset to samples in sample list, contig of interest, DEL/DUP SVTYPEs, and SVLEN >= min_cnv_size "
         bcftools view ~{gatk_sv_vcf} \
-            --no-version \
             -r ~{chromosome} \
             -S ~{sample_list} \
             -i '(INFO/SVTYPE=="DEL" || INFO/SVTYPE=="DUP") && INFO/SVLEN>=~{min_cnv_size}' \
