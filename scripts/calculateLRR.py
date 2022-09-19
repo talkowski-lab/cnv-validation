@@ -12,7 +12,7 @@ import pandas
 import numpy as np
 
 def f(x):
-    return np.exp2(x)
+    return np.exp2(float(x))
 
 def main():
     """
