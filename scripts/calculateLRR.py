@@ -45,23 +45,17 @@ def main():
     df.insert(2, 'START', df['POS'] - 1)
     df.rename(columns={'POS': 'END'}, inplace = True)
 
-    """
-    Select columns with samples in list
-    """
-    # main_cols = list(df.columns[0:4])
-    # keep_cols = main_cols + list([c for c in df.columns[5:] if c in sample_ids_list])
-    keep_cols = list(df.columns[ 0:5 ])
-    df_keep = df.loc[:, keep_cols]
+    df = df[df.iloc[:,4] != "."]  # drop missing LRR values
 
     """
     Apply exp function
     """
-    df_keep[df_keep.columns[4:]] = df_keep[df_keep.columns[4:]].apply(f)
+    df.iloc[:,4] = df.iloc[:,4].apply(f)
 
     """
     Write to output
     """
-    df_keep.to_csv(output, mode='a', index=False, sep='\t', header=True)
+    df.to_csv(output, mode='a', index=False, sep='\t', header=True)
 
 if __name__ == '__main__':
     main()

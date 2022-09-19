@@ -28,11 +28,14 @@ workflow aouArrayValidation {
         RuntimeAttr? runtime_attr_genome_strip_irs
     }
 
+    Array[String] contigs = transpose(read_tsv(primary_contigs_fai))[0]
+
     scatter (i in range(length(samples))) {
         call calculateLRR {
             input:
                 input_vcf=array_vcfs[i],
                 input_idx=array_vcfs[i] + ".tbi",
+                contigs=contigs,
                 sample=samples[i],
                 ids_corresp=ids_corresp,
                 array_validation_docker=array_validation_docker,
@@ -49,7 +52,6 @@ workflow aouArrayValidation {
             runtime_attr_override = runtime_attr_merge_lrr
     }
 
-    Array[String] contigs = transpose(read_tsv(primary_contigs_fai))[0]
     scatter (contig in contigs) {
         call subsetGATKSV {
             input:
@@ -91,6 +93,7 @@ task calculateLRR {
         File input_vcf
         File input_idx
         File ids_corresp
+        Array[String] contigs
         String sample
         String scripts
         String array_validation_docker
@@ -117,8 +120,8 @@ task calculateLRR {
         echo "Copying scripts"
         gsutil -m cp -r ~{scripts} .
 
-        echo "Reheader VCF"
-        bcftools reheader --samples ~{ids_corresp} -o ~{sample}.reheader.vcf.gz ~{input_vcf}
+        echo "Reheader VCF and limit to primary contigs"
+        bcftools reheader --no-version --samples ~{ids_corresp} -r ~{sep="," contigs} -O z -o ~{sample}.reheader.vcf.gz ~{input_vcf}
 
         bcftools query -H -f "%ID\t%CHROM\t%POS[\t%LRR]\n" ~{sample}.reheader.vcf.gz | \
             gzip > ~{sample}.lrr.gz
@@ -170,6 +173,7 @@ task subsetGATKSV {
 	command <<<
         echo "Subset to samples in sample list, contig of interest, DEL/DUP SVTYPEs, and SVLEN >= min_cnv_size "
         bcftools view ~{gatk_sv_vcf} \
+            --no-version \
             -r ~{chromosome} \
             -S ~{sample_list} \
             -i '(INFO/SVTYPE=="DEL" || INFO/SVTYPE=="DUP") && INFO/SVLEN>=~{min_cnv_size}' \
