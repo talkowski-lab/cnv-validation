@@ -122,7 +122,8 @@ task calculateLRR {
 
         echo "Reheader VCF and limit to primary contigs"
         bcftools view -r ~{sep="," contigs} -O u ~{input_vcf} \
-            | bcftools reheader --samples ~{ids_corresp}  -O z -o ~{sample}.reheader.vcf.gz
+            | bcftools reheader --samples ~{ids_corresp} \
+            | bgzip -c > ~{sample}.reheader.vcf.gz
 
         bcftools query -H -f "%ID\t%CHROM\t%POS[\t%LRR]\n" ~{sample}.reheader.vcf.gz | \
             gzip > ~{sample}.lrr.gz
