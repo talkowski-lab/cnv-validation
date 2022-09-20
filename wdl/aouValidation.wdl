@@ -117,6 +117,7 @@ task calculateLRR {
 	}
 
 	command <<<
+        set -euo pipefail
         echo "Copying scripts"
         gsutil -m cp -r ~{scripts} .
 
@@ -173,6 +174,7 @@ task subsetGATKSV {
 	}
 
 	command <<<
+        set -euo pipefail
         echo "Subset to samples in sample list, contig of interest, DEL/DUP SVTYPEs, and SVLEN >= min_cnv_size "
         bcftools view ~{gatk_sv_vcf} \
             -r ~{chromosome} \
@@ -215,17 +217,17 @@ task mergeLRR {
     RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
 
 	output {
-        File merged_lrr = "~{prefix}.merged.report.dat"
         File lrr_files = "~{prefix}.LRRfiles.fof"
 	}
 
 	command <<<
+        #set -euo pipefail
+
         echo "Copying scripts"
         gsutil -m cp -r ~{scripts} .
 
         echo "Merging LRR files"
-        echo "~{sep=" " files}" > ~{prefix}.LRRfiles.fof
-        sed -i "s/ /\n/g" ~{prefix}.LRRfiles.fof
+        echo "~{sep=' ' files}" | sed -i "s/ /\n/g" > ~{prefix}.LRRfiles.fof
         Rscript scripts/mergeFiles.R -f ~{prefix}.LRRfiles.fof -o ~{prefix}.merged.report.dat
 	>>>
 

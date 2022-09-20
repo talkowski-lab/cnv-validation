@@ -12,7 +12,10 @@ import pandas
 import numpy as np
 
 def f(x):
-    return np.exp2(float(x))
+    if x == ".":
+        return x
+    else:
+        return np.exp2(float(x))
 
 def main():
     """
@@ -45,7 +48,7 @@ def main():
     df.insert(2, 'START', df['POS'] - 1)
     df.rename(columns={'POS': 'END'}, inplace = True)
 
-    df = df[df.iloc[:,4] != "."]  # drop missing LRR values
+    # df = df[df.iloc[:,4] != "."]  # drop missing LRR values
 
     """
     Apply exp function
