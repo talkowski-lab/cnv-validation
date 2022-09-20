@@ -217,6 +217,7 @@ task mergeLRR {
     RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
 
 	output {
+        File merged_lrr = "~{prefix}.merged.report.dat"
         File lrr_files = "~{prefix}.LRRfiles.fof"
 	}
 
@@ -228,7 +229,8 @@ task mergeLRR {
 
         echo "Merging LRR files"
         echo "~{sep=' ' files}" | sed -i "s/ /\n/g" > ~{prefix}.LRRfiles.fof
-        Rscript scripts/mergeFiles.R -f ~{prefix}.LRRfiles.fof -o ~{prefix}.merged.report.dat
+        # Rscript scripts/mergeFiles.R -f ~{prefix}.LRRfiles.fof -o ~{prefix}.merged.report.dat
+        touch ~{prefix}.merged.report.dat
 	>>>
 
 	runtime {
