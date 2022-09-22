@@ -27,6 +27,7 @@ workflow aouArrayValidation {
         RuntimeAttr? runtime_attr_merge_lrr
         RuntimeAttr? runtime_attr_subset_gatk_sv
         RuntimeAttr? runtime_attr_genome_strip_irs
+        RuntimeAttr? runtime_attr_concat_irs_reports
     }
 
     Array[String] contigs = transpose(read_tsv(primary_contigs_fai))[0]
@@ -67,7 +68,7 @@ workflow aouArrayValidation {
                 runtime_attr_override = runtime_attr_subset_gatk_sv
         }
 
-        call gsirs.genomeStripIRS as genomeStripIRS{
+        call gsirs.genomeStripIRS {
             input:
                 input_file=subsetGATKSV.subset_vcf,
                 prefix=prefix,
@@ -79,12 +80,20 @@ workflow aouArrayValidation {
                 gs_path=gs_path,
                 array_validation_docker=array_validation_docker,
                 runtime_attr_override = runtime_attr_genome_strip_irs
-            }
         }
+    }
+
+    call concatIrsReports {
+        input:
+            reports=genomeStripIRS.report,
+            prefix=prefix,
+            array_validation_docker=array_validation_docker,
+            runtime_attr_override=runtime_attr_concat_irs_reports
+    }
 
     output {
         Array[File] irs_vcf = genomeStripIRS.vcf
-        Array[File] irs_report = genomeStripIRS.report
+        File irs_report = concatIrsReports.concat_report
     }
 
 }
@@ -247,6 +256,54 @@ task mergeLRR {
 	>>>
 
 	runtime {
+        cpu: select_first([runtime_attr.cpu, default_attr.cpu])
+        memory: select_first([runtime_attr.mem_gb, default_attr.mem_gb]) + " GiB"
+        disks: "local-disk " + select_first([runtime_attr.disk_gb, default_attr.disk_gb]) + " HDD"
+        bootDiskSizeGb: select_first([runtime_attr.boot_disk_gb, default_attr.boot_disk_gb])
+        preemptible: select_first([runtime_attr.preemptible, default_attr.preemptible])
+        maxRetries: select_first([runtime_attr.max_retries, default_attr.max_retries])
+        docker: array_validation_docker
+    }
+}
+
+task concatIrsReports {
+    input {
+        Array[File] reports
+        String prefix
+        String array_validation_docker
+        RuntimeAttr? runtime_attr_override
+    }
+
+    RuntimeAttr default_attr = object {
+        cpu: 1,
+        mem_gb: 64,
+        disk_gb: 80,
+        boot_disk_gb: 30,
+        preemptible: 3,
+        max_retries: 1
+    }
+    RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
+
+    output {
+        File concat_report = "~{prefix}.all_contigs.irs.report.tsv"
+    }
+
+    command <<<
+        set -eu
+
+        echo "Merging IRS Report files"
+
+        zcat ~{reports[0]} | head -n1 > ~{prefix}.all_contigs.irs.report.tsv
+
+        set -o pipefail  # set after head -n1
+
+        # assume already sorted by and within contig
+        while read SHARD; do
+            zcat $SHARD | tail -n+2 >> ~{prefix}.all_contigs.irs.report.tsv
+        done < ~{write_lines(reports)}
+    >>>
+
+    runtime {
         cpu: select_first([runtime_attr.cpu, default_attr.cpu])
         memory: select_first([runtime_attr.mem_gb, default_attr.mem_gb]) + " GiB"
         disks: "local-disk " + select_first([runtime_attr.disk_gb, default_attr.disk_gb]) + " HDD"
