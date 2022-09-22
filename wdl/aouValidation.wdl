@@ -229,6 +229,7 @@ task mergeLRR {
 
         python3 <<CODE
         import pandas as pd
+        import numpy as np
         lrr = ["~{sep='", "' files}"]
         all_lrr = None
         for file in lrr:
