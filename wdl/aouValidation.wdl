@@ -285,7 +285,7 @@ task concatIrsReports {
     RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
 
     output {
-        File concat_report = "~{prefix}.all_contigs.irs.report.tsv"
+        File concat_report = "~{prefix}.all_contigs.irs.report.tsv.gz"
     }
 
     command <<<
@@ -301,6 +301,7 @@ task concatIrsReports {
         while read SHARD; do
             zcat $SHARD | tail -n+2 >> ~{prefix}.all_contigs.irs.report.tsv
         done < ~{write_lines(reports)}
+        bgzip ~{prefix}.all_contigs.irs.report.tsv
     >>>
 
     runtime {
