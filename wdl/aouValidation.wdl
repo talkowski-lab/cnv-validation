@@ -119,7 +119,7 @@ task calculateLRR {
 
 	command <<<
         set -euo pipefail
-        echo "Copying scripts"
+        echo "Copying scripts..."
         gsutil -m cp -r ~{scripts} .
 
         echo "Reheader VCF and limit to primary contigs"
@@ -229,7 +229,7 @@ task mergeLRR {
 
         python3 <<CODE
         import pandas as pd
-        lrr = ["~{sep='"," ' files}"]
+        lrr = ["~{sep='", "' files}"]
         all_lrr = None
         for file in lrr:
             tmp = pd.read_table(file)
