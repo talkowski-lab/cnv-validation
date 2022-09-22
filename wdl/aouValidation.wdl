@@ -12,6 +12,7 @@ workflow aouArrayValidation {
         File ids_corresp
         String prefix
         String? min_cnv_size  # lower bound on SVLEN to evaluate against arrays. Default: 50000 (50kb)
+        Int max_ac  # maximum allele count to evaluate against arrays
 
         File primary_contigs_fai
         File genome
@@ -48,7 +49,6 @@ workflow aouArrayValidation {
             files=select_all(calculateLRR.array_lrr),
             array_validation_docker=array_validation_docker,
             prefix=prefix,
-            scripts=scripts,
             runtime_attr_override = runtime_attr_merge_lrr
     }
 
@@ -59,6 +59,7 @@ workflow aouArrayValidation {
                 gatk_sv_vcf_idx="~{gatk_sv_vcf}.tbi",
                 sample_list=write_lines(samples),
                 prefix=prefix,
+                max_ac=max_ac,
                 min_cnv_size=select_first([min_cnv_size, "50000"]),
                 chromosome=contig,
                 array_validation_docker=array_validation_docker,
@@ -151,6 +152,7 @@ task subsetGATKSV {
         File gatk_sv_vcf_idx
         File sample_list
         String min_cnv_size
+        Int max_ac
         String prefix
         String chromosome
         String scripts
@@ -179,6 +181,7 @@ task subsetGATKSV {
         bcftools view ~{gatk_sv_vcf} \
             -r ~{chromosome} \
             -S ~{sample_list} \
+            --max-ac ~{max_ac}
             -i '(INFO/SVTYPE=="DEL" || INFO/SVTYPE=="DUP") && INFO/SVLEN>=~{min_cnv_size}' \
             -O z \
             -o ~{prefix}.cnv.~{chromosome}.vcf.gz
@@ -201,7 +204,6 @@ task mergeLRR {
 	input {
         Array[File] files
         String prefix
-        String scripts
         String array_validation_docker
         RuntimeAttr? runtime_attr_override
 	}
@@ -217,20 +219,30 @@ task mergeLRR {
     RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
 
 	output {
-        File merged_lrr = "~{prefix}.merged.report.dat"
-        File lrr_files = "~{prefix}.LRRfiles.fof"
+        File merged_lrr = "~{prefix}.merged.lrr.exp.tsv"
 	}
 
 	command <<<
-        #set -euo pipefail
-
-        echo "Copying scripts"
-        gsutil -m cp -r ~{scripts} .
+        set -euo pipefail
 
         echo "Merging LRR files"
-        echo "~{sep=' ' files}" | sed -i "s/ /\n/g" > ~{prefix}.LRRfiles.fof
-        # Rscript scripts/mergeFiles.R -f ~{prefix}.LRRfiles.fof -o ~{prefix}.merged.report.dat
-        touch ~{prefix}.merged.report.dat
+
+        python3 <<CODE
+        import pandas as pd
+        lrr = ["~{sep='"," ' files}"]
+        all_lrr = None
+        for file in lrr:
+            tmp = pd.read_table(file)
+            if all_lrr is None:
+                all_lrr = tmp.iloc[:,:4]
+            all_lrr[tmp.columns[4]] = tmp.iloc[:,4]
+        total_probes = len(all_lrr)
+        all_lrr = all_lrr[np.all(all_lrr != ".", axis=1)]  # drop probe if any sample is missing LRR
+        probes_full_data = len(all_lrr)
+        dropped_probes = total_probes - probes_full_data
+        print(f"Total probes: {total_probes}. Probes after dropping missing data: {probes_full_data}. Dropped probes: {dropped_probes}.")
+        all_lrr.to_csv("~{prefix}.merged.lrr.exp.tsv", sep='\t', index=False, header=True)
+        CODE
 	>>>
 
 	runtime {

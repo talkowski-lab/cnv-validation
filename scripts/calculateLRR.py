@@ -45,7 +45,7 @@ def main():
 
     df.columns = df.columns.str.replace(pat='\[.*?\]', repl='', n=1).str.replace(pat=':LRR', repl='', n=1).str.replace(pat='# ', repl='', n=1)
 
-    df.insert(2, 'START', df['POS'] - 1)
+    df.insert(2, 'START', df['POS'])
     df.rename(columns={'POS': 'END'}, inplace = True)
 
     # df = df[df.iloc[:,4] != "."]  # drop missing LRR values
