@@ -9,7 +9,6 @@ task genomeStripIRS {
         File genome_index
         File genome_dict
         File array
-        File samples_list
         String prefix
         String gs_path
         String	array_validation_docker
@@ -45,7 +44,6 @@ task genomeStripIRS {
         -vcf ~{input_file} \
         -O ~{prefix}.irs.vcf \
         -arrayIntensityFile ~{array} \
-        -sample ~{samples_list} \
         -irsUseGenotypes true \
         -writeReport true \
         -reportFile ~{prefix}.irs.report.dat

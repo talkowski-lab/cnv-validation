@@ -76,7 +76,6 @@ workflow aouArrayValidation {
                 genome_index=genome_index,
                 genome_dict=genome_dict,
                 array=mergeLRR.merged_lrr,
-                samples_list=write_lines(samples),
                 gs_path=gs_path,
                 array_validation_docker=array_validation_docker,
                 runtime_attr_override = runtime_attr_genome_strip_irs
@@ -190,6 +189,7 @@ task subsetGATKSV {
         bcftools view ~{gatk_sv_vcf} \
             -r ~{chromosome} \
             -S ~{sample_list} \
+            --min-ac 1
             --max-ac ~{max_ac} \
             -i '(INFO/SVTYPE=="DEL" || INFO/SVTYPE=="DUP") && INFO/SVLEN>=~{min_cnv_size}' \
             -O z \
