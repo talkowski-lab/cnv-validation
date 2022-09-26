@@ -189,7 +189,7 @@ task subsetGATKSV {
         bcftools view ~{gatk_sv_vcf} \
             -r ~{chromosome} \
             -S ~{sample_list} \
-            --min-ac 1
+            --min-ac 1 \
             --max-ac ~{max_ac} \
             -i '(INFO/SVTYPE=="DEL" || INFO/SVTYPE=="DUP") && INFO/SVLEN>=~{min_cnv_size}' \
             -O z \
