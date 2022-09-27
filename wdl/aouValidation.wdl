@@ -194,7 +194,7 @@ task subsetGATKSV {
             --min-ac 1 \
             --max-ac ~{max_ac} \
             -i '(INFO/SVTYPE=="DEL" || INFO/SVTYPE=="DUP") && INFO/SVLEN>=~{min_cnv_size}' \
-            -O u \
+            -O v \
             | bcftools reheader --samples shuffled.samples.txt \
             | bgzip -c > ~{prefix}.cnv.~{chromosome}.vcf.gz
 
