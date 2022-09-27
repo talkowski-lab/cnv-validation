@@ -185,6 +185,8 @@ task subsetGATKSV {
 
 	command <<<
         set -euo pipefail
+        echo "Shuffle sample list to permute sample IDs"
+        shuf ~{sample_list} > shuffled.samples.txt
         echo "Subset to samples in sample list, contig of interest, DEL/DUP SVTYPEs, and SVLEN >= min_cnv_size "
         bcftools view ~{gatk_sv_vcf} \
             -r ~{chromosome} \
@@ -192,8 +194,9 @@ task subsetGATKSV {
             --min-ac 1 \
             --max-ac ~{max_ac} \
             -i '(INFO/SVTYPE=="DEL" || INFO/SVTYPE=="DUP") && INFO/SVLEN>=~{min_cnv_size}' \
-            -O z \
-            -o ~{prefix}.cnv.~{chromosome}.vcf.gz
+            -O u \
+            | bcftools reheader --samples shuffled.samples.txt \
+            | bgzip -c > ~{prefix}.cnv.~{chromosome}.vcf.gz
 
         tabix -p vcf ~{prefix}.cnv.~{chromosome}.vcf.gz
 	>>>
