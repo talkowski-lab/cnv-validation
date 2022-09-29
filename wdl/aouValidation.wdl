@@ -12,7 +12,7 @@ workflow aouArrayValidation {
         File ids_corresp
         String prefix
         String? min_cnv_size  # lower bound on SVLEN to evaluate against arrays. Default: 50000 (50kb)
-        Int max_ac  # maximum allele count to evaluate against arrays
+        Int? max_ac  # maximum allele count to evaluate against arrays
 
         File primary_contigs_fai
         File genome
@@ -160,7 +160,7 @@ task subsetGATKSV {
         File gatk_sv_vcf_idx
         File sample_list
         String min_cnv_size
-        Int max_ac
+        Int? max_ac
         String prefix
         String chromosome
         String scripts
@@ -193,7 +193,7 @@ task subsetGATKSV {
             -O u \
             | bcftools view \
             --min-ac 1 \
-            --max-ac ~{max_ac} \
+            ~{"--max-ac " + max_ac} \
             -O z \
             -o ~{prefix}.cnv.~{chromosome}.vcf.gz
 
