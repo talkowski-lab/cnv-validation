@@ -22,7 +22,7 @@ def main():
 
     rng = np.random.default_rng(seed=seed)
 
-    df = pd.read_csv(input, sep='\t', compression='gzip', na_values=['.'], index_col='ID')
+    df = pd.read_csv(input, sep='\t', na_values=['.'], index_col='ID')
 
     sample_cols = df.columns[3:]
 

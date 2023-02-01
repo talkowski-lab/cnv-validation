@@ -13,6 +13,7 @@ workflow aouArrayValidation {
         String prefix
         String? min_cnv_size  # lower bound on SVLEN to evaluate against arrays. Default: 50000 (50kb)
         Int? max_ac  # maximum allele count to evaluate against arrays
+        Int? seed # random seed for filling missing values
 
         File primary_contigs_fai
         File genome
@@ -25,6 +26,7 @@ workflow aouArrayValidation {
 
         RuntimeAttr? runtime_attr_calculate_lrr
         RuntimeAttr? runtime_attr_merge_lrr
+        RuntimeAttr? runtime_attr_fill_missing
         RuntimeAttr? runtime_attr_subset_gatk_sv
         RuntimeAttr? runtime_attr_genome_strip_irs
         RuntimeAttr? runtime_attr_concat_irs_reports
@@ -53,6 +55,16 @@ workflow aouArrayValidation {
             runtime_attr_override = runtime_attr_merge_lrr
     }
 
+    call FillMissingValues {
+        input:
+            raw_matrix = mergeLRR.merged_lrr,
+            prefix = prefix,
+            scripts = scripts,
+            seed = seed,
+            array_validation_docker=array_validation_docker,
+            runtime_attr_override = runtime_attr_fill_missing
+    }
+
     scatter (contig in contigs) {
         call subsetGATKSV {
             input:
@@ -75,7 +87,7 @@ workflow aouArrayValidation {
                 genome=genome,
                 genome_index=genome_index,
                 genome_dict=genome_dict,
-                array=mergeLRR.merged_lrr,
+                array=FillMissingValues.filled_lrr,
                 gs_path=gs_path,
                 array_validation_docker=array_validation_docker,
                 runtime_attr_override = runtime_attr_genome_strip_irs
@@ -93,6 +105,7 @@ workflow aouArrayValidation {
     output {
         Array[File] irs_vcf = genomeStripIRS.vcf
         File irs_report = concatIrsReports.concat_report
+        File missing_data_report = FillMissingValues.missing_data
     }
 
 }
@@ -248,16 +261,66 @@ task mergeLRR {
             if all_lrr is None:
                 all_lrr = tmp.iloc[:,:4]
             all_lrr[tmp.columns[4]] = tmp.iloc[:,4]
-        total_probes = len(all_lrr)
-        all_lrr = all_lrr[np.all(all_lrr != ".", axis=1)]  # drop probe if any sample is missing LRR
-        probes_full_data = len(all_lrr)
-        dropped_probes = total_probes - probes_full_data
-        print(f"Total probes: {total_probes}. Probes after dropping missing data: {probes_full_data}. Dropped probes: {dropped_probes}.")
+#        Don't drop missing data here, we'll fill it in later
+#        total_probes = len(all_lrr)
+#        all_lrr = all_lrr[np.all(all_lrr != ".", axis=1)]  # drop probe if any sample is missing LRR
+#        probes_full_data = len(all_lrr)
+#        dropped_probes = total_probes - probes_full_data
+#        print(f"Total probes: {total_probes}. Probes after dropping missing data: {probes_full_data}. Dropped probes: {dropped_probes}.")
         all_lrr.to_csv("~{prefix}.merged.lrr.exp.tsv", sep='\t', index=False, header=True)
         CODE
 	>>>
 
 	runtime {
+        cpu: select_first([runtime_attr.cpu, default_attr.cpu])
+        memory: select_first([runtime_attr.mem_gb, default_attr.mem_gb]) + " GiB"
+        disks: "local-disk " + select_first([runtime_attr.disk_gb, default_attr.disk_gb]) + " HDD"
+        bootDiskSizeGb: select_first([runtime_attr.boot_disk_gb, default_attr.boot_disk_gb])
+        preemptible: select_first([runtime_attr.preemptible, default_attr.preemptible])
+        maxRetries: select_first([runtime_attr.max_retries, default_attr.max_retries])
+        docker: array_validation_docker
+    }
+}
+
+task FillMissingValues {
+    input {
+        File raw_matrix
+        File scripts
+        Int? seed = 42
+        String prefix
+        String array_validation_docker
+        RuntimeAttr? runtime_attr_override
+    }
+
+    RuntimeAttr default_attr = object {
+                                   cpu: 1,
+                                   mem_gb: 64,
+                                   disk_gb: 80,
+                                   boot_disk_gb: 30,
+                                   preemptible: 3,
+                                   max_retries: 1
+                               }
+    RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
+
+    output {
+        File filled_lrr = "~{prefix}.merged.fillmissing.lrr.exp.tsv"
+        File missing_data = "~{prefix}.merged.missing_data.bed.gz"
+    }
+
+    command <<<
+        set -euo pipefail
+
+        echo "Copying scripts..."
+        gsutil -m cp -r ~{scripts} .
+
+        python3 scripts/imputeMissing.py --input ~{raw_matrix} \
+            --output ~{prefix}.merged.fillmissing.lrr.exp.tsv \
+            --missing-report ~{prefix}.merged.missing_data.bed --seed ~{seed}
+
+        tabix -p bed ~{prefix}.merged.missing_data.bed
+    >>>
+
+    runtime {
         cpu: select_first([runtime_attr.cpu, default_attr.cpu])
         memory: select_first([runtime_attr.mem_gb, default_attr.mem_gb]) + " GiB"
         disks: "local-disk " + select_first([runtime_attr.disk_gb, default_attr.disk_gb]) + " HDD"
