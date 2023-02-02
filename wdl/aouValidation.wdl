@@ -20,7 +20,7 @@ workflow aouArrayValidation {
         File genome_index
         File genome_dict
 
-        File scripts
+        String scripts
         File gs_tarball
         String array_validation_docker
 
@@ -279,7 +279,7 @@ task mergeLRR {
 task FillMissingValues {
     input {
         File raw_matrix
-        File scripts
+        String scripts
         Int? seed = 42
         String prefix
         String array_validation_docker
