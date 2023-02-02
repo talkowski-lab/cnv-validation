@@ -261,12 +261,6 @@ task mergeLRR {
             if all_lrr is None:
                 all_lrr = tmp.iloc[:,:4]
             all_lrr[tmp.columns[4]] = tmp.iloc[:,4]
-#        Don't drop missing data here, we'll fill it in later
-#        total_probes = len(all_lrr)
-#        all_lrr = all_lrr[np.all(all_lrr != ".", axis=1)]  # drop probe if any sample is missing LRR
-#        probes_full_data = len(all_lrr)
-#        dropped_probes = total_probes - probes_full_data
-#        print(f"Total probes: {total_probes}. Probes after dropping missing data: {probes_full_data}. Dropped probes: {dropped_probes}.")
         all_lrr.to_csv("~{prefix}.merged.lrr.exp.tsv", sep='\t', index=False, header=True)
         CODE
 	>>>
