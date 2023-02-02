@@ -243,7 +243,7 @@ task mergeLRR {
     RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
 
 	output {
-        File merged_lrr = "~{prefix}.merged.lrr.exp.tsv"
+        File merged_lrr = "~{prefix}.merged.lrr.exp.tsv.gz"
 	}
 
 	command <<<
@@ -263,6 +263,7 @@ task mergeLRR {
             all_lrr[tmp.columns[4]] = tmp.iloc[:,4]
         all_lrr.to_csv("~{prefix}.merged.lrr.exp.tsv", sep='\t', index=False, header=True)
         CODE
+        bgzip ~{prefix}.merged.lrr.exp.tsv
 	>>>
 
 	runtime {
@@ -297,7 +298,7 @@ task FillMissingValues {
     RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
 
     output {
-        File filled_lrr = "~{prefix}.merged.fillmissing.lrr.exp.tsv"
+        File filled_lrr = "~{prefix}.merged.fillmissing.lrr.exp.tsv.gz"
         File missing_data = "~{prefix}.merged.missing_data.bed.gz"
     }
 
@@ -311,7 +312,8 @@ task FillMissingValues {
             --output ~{prefix}.merged.fillmissing.lrr.exp.tsv \
             --missing-report ~{prefix}.merged.missing_data.bed --seed ~{seed}
 
-        tabix -p bed ~{prefix}.merged.missing_data.bed
+        bgzip ~{prefix}.merged.fillmissing.lrr.exp.tsv
+        bgzip ~{prefix}.merged.missing_data.bed
     >>>
 
     runtime {
