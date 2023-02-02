@@ -261,9 +261,8 @@ task mergeLRR {
             if all_lrr is None:
                 all_lrr = tmp.iloc[:,:4]
             all_lrr[tmp.columns[4]] = tmp.iloc[:,4]
-        all_lrr.to_csv("~{prefix}.merged.lrr.exp.tsv", sep='\t', index=False, header=True)
+        all_lrr.to_csv("~{prefix}.merged.lrr.exp.tsv.gz", sep='\t', index=False, header=True, compression='gzip')
         CODE
-        bgzip ~{prefix}.merged.lrr.exp.tsv
 	>>>
 
 	runtime {
@@ -309,10 +308,9 @@ task FillMissingValues {
         gsutil -m cp -r ~{scripts} .
 
         python3 scripts/imputeMissing.py --input ~{raw_matrix} \
-            --output ~{prefix}.merged.fillmissing.lrr.exp.tsv \
+            --output ~{prefix}.merged.fillmissing.lrr.exp.tsv.gz \
             --missing-report ~{prefix}.merged.missing_data.bed --seed ~{seed}
 
-        bgzip ~{prefix}.merged.fillmissing.lrr.exp.tsv
         bgzip ~{prefix}.merged.missing_data.bed
     >>>
 

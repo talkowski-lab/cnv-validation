@@ -22,7 +22,7 @@ def main():
 
     rng = np.random.default_rng(seed=seed)
 
-    df = pd.read_csv(input, sep='\t', na_values=['.'], index_col='ID')
+    df = pd.read_csv(input, sep='\t', na_values=['.'], index_col='ID', compression='gzip')
 
     sample_cols = df.columns[3:]
 
@@ -43,7 +43,7 @@ def main():
                     newval = df.loc[probe, f].item()
                     df.loc[probe, null_sample] = newval
 
-    df.to_csv(output, mode='w', index=False, sep='\t', header=True)
+    df.to_csv(output, mode='w', index=False, sep='\t', header=True, compression='gzip')
 
 
 if __name__ == '__main__':
