@@ -10,7 +10,7 @@ task genomeStripIRS {
         File genome_dict
         File array
         String prefix
-        String gs_path
+        File gs_tarball
         String	array_validation_docker
         RuntimeAttr? runtime_attr_override
     }
@@ -32,7 +32,7 @@ task genomeStripIRS {
 
     command <<<
 
-        gsutil -m cp -r ~{gs_path} /cromwell_root/
+        tar -xzvf ~{gs_tarball} -C /cromwell_root
 
         export SV_DIR=/cromwell_root/svtoolkit
         export classpath="${SV_DIR}/lib/SVToolkit.jar:${SV_DIR}/lib/gatk/GenomeAnalysisTK.jar:${SV_DIR}/lib/gatk/Queue.jar"
