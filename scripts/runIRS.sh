@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Author: asanchis@broadinstitute.org
 
+set -euo pipefail
+
 export SV_DIR=/data/talkowski/an436/software/svtoolkit
 
 mx="-Xmx64g"
