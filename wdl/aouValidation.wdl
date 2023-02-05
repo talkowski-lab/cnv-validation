@@ -21,6 +21,7 @@ workflow aouArrayValidation {
         File genome_dict
 
         String scripts
+        File fill_missing_script
         File gs_tarball
         String array_validation_docker
 
@@ -59,7 +60,7 @@ workflow aouArrayValidation {
         input:
             raw_matrix = mergeLRR.merged_lrr,
             prefix = prefix,
-            scripts = scripts,
+            fill_missing_script = fill_missing_script,
             seed = seed,
             array_validation_docker=array_validation_docker,
             runtime_attr_override = runtime_attr_fill_missing
@@ -279,7 +280,7 @@ task mergeLRR {
 task FillMissingValues {
     input {
         File raw_matrix
-        String scripts
+        File fill_missing_script
         Int? seed = 42
         String prefix
         String array_validation_docker
@@ -304,10 +305,7 @@ task FillMissingValues {
     command <<<
         set -euo pipefail
 
-        echo "Copying scripts..."
-        gsutil -m cp -r ~{scripts} .
-
-        python3 scripts/imputeMissing.py --input ~{raw_matrix} \
+        python3 ~{fill_missing_script} --input ~{raw_matrix} \
             --output ~{prefix}.merged.fillmissing.lrr.exp.tsv.gz \
             --missing-report ~{prefix}.merged.missing_data.bed --seed ~{seed}
 
