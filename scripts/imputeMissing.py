@@ -26,24 +26,29 @@ def main():
 
     sample_cols = df.columns[3:]
 
-    with open(missing, 'w') as missing_report:
-        for probe in df.index:
-            null_samples = df.columns[df.loc[probe].isnull()]
-            if len(null_samples) > 0:
-                missing_report.write("\t".join(
-                    map(str,
-                        df.loc[probe, ['CHROM', 'START', 'END']].tolist() +
-                        [probe] +
-                        [",".join([sample for sample in df.columns[df.loc[probe].isnull()]]) + "\n"])))
-                notnull = df.shape[1] - 3 - len(null_samples)
-                val_order = df.loc[probe][3:].argsort()
-                for null_sample in null_samples:
-                    x = rng.integers(0, notnull)
-                    f = sample_cols[val_order == x]
-                    newval = df.loc[probe, f].item()
-                    df.loc[probe, null_sample] = newval
+    null_samples = df.iloc[:, 3:].isna()
 
-    df.to_csv(output, mode='w', index=False, sep='\t', header=True, compression='gzip')
+    val_order = df.iloc[:, 3:].values.argsort()
+
+    probes_with_missing_vals = null_samples.any(axis=1)
+
+    with open(missing, 'w') as missing_report:
+        for probe in probes_with_missing_vals.index[probes_with_missing_vals]:
+            probe_nas = null_samples.loc[probe]
+            null_samples_for_row = sample_cols[probe_nas]
+            missing_report.write("\t".join(
+                map(str,
+                    df.loc[probe, ['CHROM', 'START', 'END']].tolist() +
+                    [probe] +
+                    [",".join([sample for sample in null_samples_for_row]) + "\n"])))
+            notnull = len(sample_cols) - null_samples.loc[probe].sum()
+            for null_sample in null_samples_for_row:
+                x = rng.integers(0, notnull)
+                f = sample_cols[val_order[df.index.get_loc(probe)] == x]
+                newval = df.loc[probe, f].item()
+                df.loc[probe, null_sample] = newval
+
+    df.to_csv(output, mode='w', index=True, sep='\t', header=True, compression='gzip')
 
 
 if __name__ == '__main__':
