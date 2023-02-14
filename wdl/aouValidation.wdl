@@ -48,25 +48,26 @@ workflow aouArrayValidation {
                 runtime_attr_override = runtime_attr_calculate_lrr
         }
     }
-    call mergeLRR {
-        input:
-            files=select_all(calculateLRR.array_lrr),
-            array_validation_docker=array_validation_docker,
-            prefix=prefix,
-            runtime_attr_override = runtime_attr_merge_lrr
-    }
-
-    call FillMissingValues {
-        input:
-            raw_matrix = mergeLRR.merged_lrr,
-            prefix = prefix,
-            fill_missing_script = fill_missing_script,
-            seed = seed,
-            array_validation_docker=array_validation_docker,
-            runtime_attr_override = runtime_attr_fill_missing
-    }
-
     scatter (contig in contigs) {
+
+        call mergeLRR {
+            input:
+                files=select_all(calculateLRR.array_lrr),
+                array_validation_docker=array_validation_docker,
+                prefix=prefix,
+                chromosome=contig,
+                runtime_attr_override = runtime_attr_merge_lrr
+        }
+
+        call FillMissingValues {
+            input:
+                raw_matrix = mergeLRR.merged_lrr,
+                fill_missing_script = fill_missing_script,
+                seed = seed,
+                array_validation_docker=array_validation_docker,
+                runtime_attr_override = runtime_attr_fill_missing
+        }
+
         call subsetGATKSV {
             input:
                 gatk_sv_vcf=gatk_sv_vcf,
@@ -106,7 +107,7 @@ workflow aouArrayValidation {
     output {
         Array[File] irs_vcf = genomeStripIRS.vcf
         File irs_report = concatIrsReports.concat_report
-        File missing_data_report = FillMissingValues.missing_data
+        Array[File] missing_data_report = FillMissingValues.missing_data
     }
 
 }
@@ -136,7 +137,7 @@ task calculateLRR {
 
 	output {
         File lrr = "~{sample}.lrr.gz"
-        File array_lrr = "~{sample}.lrr.exp"
+        File array_lrr = "~{sample}.lrr.exp.gz"
 	}
 
 	command <<<
@@ -155,6 +156,8 @@ task calculateLRR {
         echo "Calculating LRRs"
         python3 scripts/calculateLRR.py --input ~{sample}.lrr.gz \
             --output ~{sample}.lrr.exp
+
+        bgzip ~{sample}.lrr.exp
 	>>>
 
 	runtime {
@@ -229,6 +232,7 @@ task mergeLRR {
 	input {
         Array[File] files
         String prefix
+        String chromosome
         String array_validation_docker
         RuntimeAttr? runtime_attr_override
 	}
@@ -244,7 +248,7 @@ task mergeLRR {
     RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
 
 	output {
-        File merged_lrr = "~{prefix}.merged.lrr.exp.tsv.gz"
+        File merged_lrr = "~{prefix}.merged.lrr.exp.~{chromosome}.tsv.gz"
 	}
 
 	command <<<
@@ -259,10 +263,11 @@ task mergeLRR {
         all_lrr = None
         for file in lrr:
             tmp = pd.read_table(file)
+            tmp = tmp.loc[tmp['CHROM'] == "~{chromosome}"
             if all_lrr is None:
                 all_lrr = tmp.iloc[:,:4]
             all_lrr[tmp.columns[4]] = tmp.iloc[:,4]
-        all_lrr.to_csv("~{prefix}.merged.lrr.exp.tsv.gz", sep='\t', index=False, header=True, compression='gzip')
+        all_lrr.to_csv("~{prefix}.merged.lrr.exp.~{chromosome}.tsv.gz", sep='\t', index=False, header=True, compression='gzip')
         CODE
 	>>>
 
@@ -282,10 +287,11 @@ task FillMissingValues {
         File raw_matrix
         File fill_missing_script
         Int? seed = 42
-        String prefix
         String array_validation_docker
         RuntimeAttr? runtime_attr_override
     }
+
+    String prefix = basename(raw_matrix, ".tsv.gz")
 
     RuntimeAttr default_attr = object {
                                    cpu: 1,
@@ -298,18 +304,18 @@ task FillMissingValues {
     RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
 
     output {
-        File filled_lrr = "~{prefix}.merged.fillmissing.lrr.exp.tsv.gz"
-        File missing_data = "~{prefix}.merged.missing_data.bed.gz"
+        File filled_lrr = "~{prefix}.fillmissing.tsv.gz"
+        File missing_data = "~{prefix}.missing_data.bed.gz"
     }
 
     command <<<
         set -euo pipefail
 
         python3 ~{fill_missing_script} --input ~{raw_matrix} \
-            --output ~{prefix}.merged.fillmissing.lrr.exp.tsv.gz \
-            --missing-report ~{prefix}.merged.missing_data.bed --seed ~{seed}
+            --output ~{prefix}.fillmissing.tsv.gz \
+            --missing-report ~{prefix}.missing_data.bed --seed ~{seed}
 
-        bgzip ~{prefix}.merged.missing_data.bed
+        bgzip ~{prefix}.missing_data.bed
     >>>
 
     runtime {
