@@ -263,7 +263,7 @@ task mergeLRR {
         all_lrr = None
         for file in lrr:
             tmp = pd.read_table(file)
-            tmp = tmp.loc[tmp['CHROM'] == "~{chromosome}"
+            tmp = tmp.loc[tmp['CHROM'] == "~{chromosome}"]
             if all_lrr is None:
                 all_lrr = tmp.iloc[:,:4]
             all_lrr[tmp.columns[4]] = tmp.iloc[:,4]
