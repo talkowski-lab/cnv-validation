@@ -20,7 +20,7 @@ workflow aouArrayValidation {
         File genome_dict
 
         File scripts
-        String gs_path
+        File gs_tarball
         String array_validation_docker
 
         RuntimeAttr? runtime_attr_calculate_lrr
@@ -76,7 +76,7 @@ workflow aouArrayValidation {
                 genome_index=genome_index,
                 genome_dict=genome_dict,
                 array=mergeLRR.merged_lrr,
-                gs_path=gs_path,
+                gs_tarball=gs_tarball,
                 array_validation_docker=array_validation_docker,
                 runtime_attr_override = runtime_attr_genome_strip_irs
         }
