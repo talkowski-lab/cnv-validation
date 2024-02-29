@@ -8,10 +8,10 @@ workflow aouArrayValidation {
     input {
         Array[String] samples
         Array[File] array_vcfs
-        File gatk_sv_vcf
+        Array[File] gatk_sv_vcfs  # per-contig VCFs. length of array must match contigs provided
         File ids_corresp
         String prefix
-        String? min_cnv_size  # lower bound on SVLEN to evaluate against arrays. Default: 50000 (50kb)
+        String? min_cnv_size  # lower bound on SVLEN to evaluate against arrays. Default: 10000 (10kb)
         Int? max_ac  # maximum allele count to evaluate against arrays
 
         File primary_contigs_fai
@@ -53,16 +53,16 @@ workflow aouArrayValidation {
             runtime_attr_override = runtime_attr_merge_lrr
     }
 
-    scatter (contig in contigs) {
+    scatter (i in range(length(contigs))) {
         call subsetGATKSV {
             input:
-                gatk_sv_vcf=gatk_sv_vcf,
-                gatk_sv_vcf_idx="~{gatk_sv_vcf}.tbi",
+                gatk_sv_vcf=gatk_sv_vcfs[i],
+                gatk_sv_vcf_idx="~{gatk_sv_vcfs[i]}.tbi",
                 sample_list=write_lines(samples),
                 prefix=prefix,
                 max_ac=max_ac,
-                min_cnv_size=select_first([min_cnv_size, "50000"]),
-                chromosome=contig,
+                min_cnv_size=select_first([min_cnv_size, "10000"]),
+                chromosome=contigs[i],
                 array_validation_docker=array_validation_docker,
                 scripts=scripts,
                 runtime_attr_override = runtime_attr_subset_gatk_sv
