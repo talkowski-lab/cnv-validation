@@ -6,12 +6,10 @@ import "Structs.wdl"
 workflow GenomeStripIRSSharded {
 
     input {
-        Array[String] samples
         File filled_lrr
         File per_contig_subset_gatk_sv_vcf
         String prefix
 
-        File primary_contigs_fai
         File genome
         File genome_index
         File genome_dict

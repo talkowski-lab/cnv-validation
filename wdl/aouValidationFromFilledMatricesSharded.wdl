@@ -42,7 +42,10 @@ workflow aouArrayValidation {
                 genome_dict=genome_dict,
                 filled_lrr=filled_lrr_by_contig[i],
                 gs_tarball=gs_tarball,
+                records_per_shard=records_per_shard,
+                scripts=scripts,
                 array_validation_docker=array_validation_docker,
+                sv_pipeline_docker=sv_pipeline_docker,
                 runtime_attr_override_scatter = runtime_attr_override_scatter,
                 runtime_attr_genome_strip_irs = runtime_attr_genome_strip_irs
         }
