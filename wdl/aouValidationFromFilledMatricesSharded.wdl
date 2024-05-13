@@ -42,30 +42,32 @@ workflow aouArrayValidation {
                 runtime_attr_override=runtime_attr_override_scatter
         }
 
-        call gsirs.genomeStripIRS {
-            input:
-                input_file=per_contig_subset_gatk_sv_vcf[i],
-                prefix=prefix,
-                genome=genome,
-                genome_index=genome_index,
-                genome_dict=genome_dict,
-                array=filled_lrr_by_contig[i],
-                gs_tarball=gs_tarball,
-                array_validation_docker=array_validation_docker,
-                runtime_attr_override = runtime_attr_genome_strip_irs
+        scatter (j in range(length(ScatterVcf.shards))) {
+            call gsirs.genomeStripIRS {
+                input:
+                    input_file=ScatterVcf.shards[j],
+                    prefix=prefix,
+                    genome=genome,
+                    genome_index=genome_index,
+                    genome_dict=genome_dict,
+                    array=filled_lrr_by_contig[i],
+                    gs_tarball=gs_tarball,
+                    array_validation_docker=array_validation_docker,
+                    runtime_attr_override = runtime_attr_genome_strip_irs
+            }
         }
     }
 
     call concatIrsReports {
         input:
-            reports=genomeStripIRS.report,
+            reports=flatten(genomeStripIRS.report),
             prefix=prefix,
             array_validation_docker=array_validation_docker,
             runtime_attr_override=runtime_attr_concat_irs_reports
     }
 
     output {
-        Array[File] irs_vcf = genomeStripIRS.vcf
+        Array[File] irs_vcf = flatten(genomeStripIRS.vcf)
         File irs_report = concatIrsReports.concat_report
     }
 
