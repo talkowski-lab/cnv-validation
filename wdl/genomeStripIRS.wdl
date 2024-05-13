@@ -31,6 +31,7 @@ task genomeStripIRS {
     }
 
     command <<<
+        set -euo pipefail
 
         tar -xzvf ~{gs_tarball} -C /cromwell_root
 
