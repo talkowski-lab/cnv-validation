@@ -24,6 +24,8 @@ task genomeStripIRS {
         max_retries: 1
     }
     RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
+    Float mem_gb = select_first([runtime_attr.mem_gb, default_attr.mem_gb])
+    Int java_mem_mb = ceil(mem_gb * 1000 * 0.8)
 
     output {
         File vcf = "~{prefix}.irs.vcf.gz"
@@ -38,7 +40,7 @@ task genomeStripIRS {
         export SV_DIR=/cromwell_root/svtoolkit
         export classpath="${SV_DIR}/lib/SVToolkit.jar:${SV_DIR}/lib/gatk/GenomeAnalysisTK.jar:${SV_DIR}/lib/gatk/Queue.jar"
 
-        java -Xmx24g -cp $classpath \
+        java -Xmx~{java_mem_mb}M -cp $classpath \
         org.broadinstitute.sv.main.SVAnnotator \
         -A IntensityRankSum \
         -R ~{genome} \
