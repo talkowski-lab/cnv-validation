@@ -12,6 +12,8 @@ workflow aouArrayValidation {
         Array[File] per_contig_subset_gatk_sv_vcf_idx
         String prefix
 
+        Int max_cnv_size=10000000
+
         File primary_contigs_fai
         File genome
         File genome_index
@@ -25,6 +27,7 @@ workflow aouArrayValidation {
         String sv_pipeline_docker
 
         RuntimeAttr? runtime_attr_override_scatter
+        RuntimeAttr? runtime_attr_override_remove_large_events
         RuntimeAttr? runtime_attr_genome_strip_irs
         RuntimeAttr? runtime_attr_concat_irs_reports
     }
@@ -33,9 +36,19 @@ workflow aouArrayValidation {
 
     scatter (i in range(length(contigs))) {
 
+        call RemoveVeryLargeEvents {
+            input:
+                gatk_sv_vcf=per_contig_subset_gatk_sv_vcf[i],
+                prefix=prefix,
+                max_size=max_cnv_size,
+                chromosome=contigs[i],
+                sv_pipeline_docker=sv_pipeline_docker,
+                runtime_attr_override = runtime_attr_override_remove_large_events
+        }
+
         call gsirs_sharded.GenomeStripIRSSharded as GenomeStripIRSSharded {
             input:
-                per_contig_subset_gatk_sv_vcf=per_contig_subset_gatk_sv_vcf[i],
+                per_contig_subset_gatk_sv_vcf=RemoveVeryLargeEvents.filtered_vcf,
                 prefix=prefix,
                 genome=genome,
                 genome_index=genome_index,
@@ -64,6 +77,52 @@ workflow aouArrayValidation {
         File irs_report = concatIrsReports.concat_report
     }
 
+}
+
+task RemoveVeryLargeEvents {
+    input {
+        File gatk_sv_vcf
+        String chromosome
+        String max_size
+        String prefix
+        String sv_pipeline_docker
+        RuntimeAttr? runtime_attr_override
+    }
+
+    RuntimeAttr default_attr = object {
+                                   cpu: 1,
+                                   mem_gb: 8,
+                                   disk_gb: 30,
+                                   boot_disk_gb: 20,
+                                   preemptible: 3,
+                                   max_retries: 1
+                               }
+    RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
+
+    output {
+        File filtered_vcf = "~{prefix}.cnv.~{chromosome}.vcf.gz"
+        File filtered_vcf_index = "~{prefix}.cnv.~{chromosome}.vcf.gz.tbi"
+    }
+
+    command <<<
+        set -euo pipefail
+        echo "Subset to SVLEN <= max_cnv_size "
+        bcftools view ~{gatk_sv_vcf} \
+            -i 'INFO/SVLEN<=~{max_size}' \
+            -o ~{prefix}.cnv.~{chromosome}.vcf.gz
+
+        tabix -p vcf ~{prefix}.cnv.~{chromosome}.vcf.gz
+    >>>
+
+    runtime {
+        cpu: select_first([runtime_attr.cpu, default_attr.cpu])
+        memory: select_first([runtime_attr.mem_gb, default_attr.mem_gb]) + " GiB"
+        disks: "local-disk " + select_first([runtime_attr.disk_gb, default_attr.disk_gb]) + " HDD"
+        bootDiskSizeGb: select_first([runtime_attr.boot_disk_gb, default_attr.boot_disk_gb])
+        preemptible: select_first([runtime_attr.preemptible, default_attr.preemptible])
+        maxRetries: select_first([runtime_attr.max_retries, default_attr.max_retries])
+        docker: sv_pipeline_docker
+    }
 }
 
 
