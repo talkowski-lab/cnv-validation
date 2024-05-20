@@ -12,6 +12,8 @@ workflow aouArrayValidation {
         Array[File] per_contig_gatk_sv_vcf_idx
         String prefix
 
+        File sample_map
+
         Int max_cnv_size=10000000
         String? min_cnv_size  # lower bound on SVLEN to evaluate against arrays. Default: 50000 (50kb)
         Int? max_ac  # maximum allele count to evaluate against arrays
@@ -43,6 +45,7 @@ workflow aouArrayValidation {
                 gatk_sv_vcf=per_contig_gatk_sv_vcf[i],
                 gatk_sv_vcf_idx=per_contig_gatk_sv_vcf_idx[i],
                 sample_list=write_lines(samples),
+                sample_map=sample_map,
                 prefix=prefix,
                 max_ac=max_ac,
                 min_cnv_size=select_first([min_cnv_size, "50000"]),
@@ -187,6 +190,7 @@ task subsetGATKSV {
         File gatk_sv_vcf
         File gatk_sv_vcf_idx
         File sample_list
+        File sample_map
         Int min_cnv_size
         Int max_cnv_size
         Int? max_ac
@@ -215,7 +219,8 @@ task subsetGATKSV {
 	command <<<
         set -euo pipefail
         echo "Subset to samples in sample list, contig of interest, DEL/DUP SVTYPEs, and SVLEN >= min_cnv_size "
-        bcftools view ~{gatk_sv_vcf} \
+        bcftools reheader --samples ~{sample_map} -O u |
+          bcftools view ~{gatk_sv_vcf} \
             -r ~{chromosome} \
             -S ~{sample_list} \
             -i '(INFO/SVTYPE=="DEL" || INFO/SVTYPE=="DUP") && INFO/SVLEN>=~{min_cnv_size} && INFO/SVLEN<~{max_cnv_size}' \
