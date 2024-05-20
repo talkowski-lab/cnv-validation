@@ -8,11 +8,13 @@ workflow aouArrayValidation {
     input {
         Array[String] samples
         Array[File] filled_lrr_by_contig
-        Array[File] per_contig_subset_gatk_sv_vcf
-        Array[File] per_contig_subset_gatk_sv_vcf_idx
+        Array[File] per_contig_gatk_sv_vcf
+        Array[File] per_contig_gatk_sv_vcf_idx
         String prefix
 
         Int max_cnv_size=10000000
+        String? min_cnv_size  # lower bound on SVLEN to evaluate against arrays. Default: 50000 (50kb)
+        Int? max_ac  # maximum allele count to evaluate against arrays
 
         File primary_contigs_fai
         File genome
@@ -27,7 +29,7 @@ workflow aouArrayValidation {
         String sv_pipeline_docker
 
         RuntimeAttr? runtime_attr_override_scatter
-        RuntimeAttr? runtime_attr_override_remove_large_events
+        RuntimeAttr? runtime_attr_subset_gatk_sv
         RuntimeAttr? runtime_attr_genome_strip_irs
         RuntimeAttr? runtime_attr_concat_irs_reports
     }
@@ -36,19 +38,24 @@ workflow aouArrayValidation {
 
     scatter (i in range(length(contigs))) {
 
-        call RemoveVeryLargeEvents {
+        call subsetGATKSV {
             input:
-                gatk_sv_vcf=per_contig_subset_gatk_sv_vcf[i],
+                gatk_sv_vcf=per_contig_gatk_sv_vcf[i],
+                gatk_sv_vcf_idx=per_contig_gatk_sv_vcf_idx[i],
+                sample_list=write_lines(samples),
                 prefix=prefix,
-                max_size=max_cnv_size,
+                max_ac=max_ac,
+                min_cnv_size=select_first([min_cnv_size, "50000"]),
+                max_cnv_size=max_cnv_size,
                 chromosome=contigs[i],
-                sv_pipeline_docker=sv_pipeline_docker,
-                runtime_attr_override = runtime_attr_override_remove_large_events
+                array_validation_docker=array_validation_docker,
+                scripts=scripts,
+                runtime_attr_override = runtime_attr_subset_gatk_sv
         }
 
         call gsirs_sharded.GenomeStripIRSSharded as GenomeStripIRSSharded {
             input:
-                per_contig_subset_gatk_sv_vcf=RemoveVeryLargeEvents.filtered_vcf,
+                per_contig_subset_gatk_sv_vcf=subsetGATKSV.subset_vcf,
                 prefix=prefix,
                 genome=genome,
                 genome_index=genome_index,
@@ -174,3 +181,62 @@ task concatIrsReports {
         docker: array_validation_docker
     }
 }
+
+task subsetGATKSV {
+	input {
+        File gatk_sv_vcf
+        File gatk_sv_vcf_idx
+        File sample_list
+        Int min_cnv_size
+        Int max_cnv_size
+        Int? max_ac
+        String prefix
+        String chromosome
+        String scripts
+        String array_validation_docker
+        RuntimeAttr? runtime_attr_override
+	}
+
+    RuntimeAttr default_attr = object {
+        cpu: 1,
+        mem_gb: 32,
+        disk_gb: 30,
+        boot_disk_gb: 20,
+        preemptible: 3,
+        max_retries: 1
+    }
+    RuntimeAttr runtime_attr = select_first([runtime_attr_override, default_attr])
+
+	output {
+        File subset_vcf = "~{prefix}.cnv.~{chromosome}.vcf.gz"
+        File subset_vcf_index = "~{prefix}.cnv.~{chromosome}.vcf.gz.tbi"
+	}
+
+	command <<<
+        set -euo pipefail
+        echo "Subset to samples in sample list, contig of interest, DEL/DUP SVTYPEs, and SVLEN >= min_cnv_size "
+        bcftools view ~{gatk_sv_vcf} \
+            -r ~{chromosome} \
+            -S ~{sample_list} \
+            -i '(INFO/SVTYPE=="DEL" || INFO/SVTYPE=="DUP") && INFO/SVLEN>=~{min_cnv_size} && INFO/SVLEN<~{max_cnv_size}' \
+            -O u \
+            | bcftools view \
+            --min-ac 1 \
+            ~{"--max-ac " + max_ac} \
+            -O z \
+            -o ~{prefix}.cnv.~{chromosome}.vcf.gz
+
+        tabix -p vcf ~{prefix}.cnv.~{chromosome}.vcf.gz
+	>>>
+
+	runtime {
+        cpu: select_first([runtime_attr.cpu, default_attr.cpu])
+        memory: select_first([runtime_attr.mem_gb, default_attr.mem_gb]) + " GiB"
+        disks: "local-disk " + select_first([runtime_attr.disk_gb, default_attr.disk_gb]) + " HDD"
+        bootDiskSizeGb: select_first([runtime_attr.boot_disk_gb, default_attr.boot_disk_gb])
+        preemptible: select_first([runtime_attr.preemptible, default_attr.preemptible])
+        maxRetries: select_first([runtime_attr.max_retries, default_attr.max_retries])
+        docker: array_validation_docker
+    }
+}
+
