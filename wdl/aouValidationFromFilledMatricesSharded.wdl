@@ -219,7 +219,7 @@ task subsetGATKSV {
 	command <<<
         set -euo pipefail
         echo "Subset to samples in sample list, contig of interest, DEL/DUP SVTYPEs, and SVLEN >= min_cnv_size "
-        bcftools reheader --samples ~{sample_map} -O u |
+        bcftools reheader --samples ~{sample_map} |
           bcftools view ~{gatk_sv_vcf} \
             -r ~{chromosome} \
             -S ~{sample_list} \
