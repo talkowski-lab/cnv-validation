@@ -32,6 +32,8 @@ def main():
 
     probes_with_missing_vals = null_samples.any(axis=1)
 
+    probes_with_lt_half_missing = df.iloc[:, 3:].apply(lambda x: x.isna().sum() < (sample_cols / 2),  axis=1)
+
     with open(missing, 'w') as missing_report:
         for probe in probes_with_missing_vals.index[probes_with_missing_vals]:
             probe_nas = null_samples.loc[probe]
@@ -40,7 +42,8 @@ def main():
                 map(str,
                     df.loc[probe, ['CHROM', 'START', 'END']].tolist() +
                     [probe] +
-                    [",".join([sample for sample in null_samples_for_row]) + "\n"])))
+                    [",".join([sample for sample in null_samples_for_row]) + "\n"] +
+                    probes_with_lt_half_missing[probe])))
             notnull = len(sample_cols) - null_samples.loc[probe].sum()
             for null_sample in null_samples_for_row:
                 x = rng.integers(0, notnull)
@@ -48,6 +51,7 @@ def main():
                 newval = df.loc[probe, f].item()
                 df.loc[probe, null_sample] = newval
 
+    df = df.loc[probes_with_lt_half_missing]
     df.to_csv(output, mode='w', index=True, sep='\t', header=True, compression='gzip')
 
 
